@@ -1,0 +1,7 @@
+INSERT INTO products (name, description, price, offer_price, is_offer, stock, image_url, size_options, color_options, quantity_pricing, size_pricing)
+VALUES
+('روج أحمر فاخر مات', 'روج طويل الثبات بدرجة أحمر كلاسيكي، خفيف على الشفاه ولا يسبب جفاف.', 250, 199, true, 50, 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=800', '{}', ARRAY['أحمر','وردي','نبيتي'], '[]'::jsonb, '[]'::jsonb),
+('كريم أساس سائل تغطية كاملة', 'فاونديشن تغطية عالية بملمس طبيعي يدوم 24 ساعة، مناسب لجميع أنواع البشرة.', 480, NULL, false, 35, 'https://images.unsplash.com/photo-1631214524020-3c8a8d8c0b6e?w=800', '{}', ARRAY['Ivory','Beige','Sand','Honey'], '[]'::jsonb, '[]'::jsonb),
+('باليت ظلال عيون 12 لون', 'باليت بدرجات نيود وترابية، خامة شيمر ومات، طول ثبات ممتاز.', 650, 549, true, 25, 'https://images.unsplash.com/photo-1583241800698-9c2e0c5d1e85?w=800', '{}', ARRAY['Nude','Warm','Smoky'], '[]'::jsonb, '[]'::jsonb),
+('ماسكارا تطويل وتكثيف', 'ماسكارا مقاومة للماء، تعطي رموش طويلة وكثيفة من أول استخدام.', 220, NULL, false, 80, 'https://images.unsplash.com/photo-1631730486572-226d1f595b68?w=800', '{}', ARRAY['أسود','بني'], '[]'::jsonb, '[]'::jsonb),
+('عطر نسائي وردي فاخر 100مل', 'عطر فرنسي بنفحات الورد والفانيليا، ثبات يدوم طوال اليوم.', 950, 799, true, 18, 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=800', '{}', ARRAY['وردي'], '[]'::jsonb, '[]'::jsonb);
