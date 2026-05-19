@@ -949,7 +949,7 @@ export type Database = {
           id: string
           last_reset: string | null
           metadata: Json | null
-          metric: string
+          metric: string | null
           total_orders: number
           total_sales: number
           value: number
@@ -959,7 +959,7 @@ export type Database = {
           id?: string
           last_reset?: string | null
           metadata?: Json | null
-          metric: string
+          metric?: string | null
           total_orders?: number
           total_sales?: number
           value?: number
@@ -969,7 +969,7 @@ export type Database = {
           id?: string
           last_reset?: string | null
           metadata?: Json | null
-          metric?: string
+          metric?: string | null
           total_orders?: number
           total_sales?: number
           value?: number
