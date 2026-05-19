@@ -234,24 +234,34 @@ const Invoices = () => {
           </div>
           <div style="flex:1;padding:3px 0;">
             ${order.order_items?.map((item: any, idx: number) => {
-              const quantity = item.quantity || 1;
-              const itemTotal = parseFloat(item.price.toString()) * quantity;
-              let productName = item.products?.name;
+              let productName = item.products?.name || item.products?.name_ar || item.products?.name_en;
               let itemSize = item.size;
               let itemColor = item.color;
-              if (!productName && item.product_details) {
-                try {
-                  const details = typeof item.product_details === 'string' ? JSON.parse(item.product_details) : item.product_details;
-                  productName = details?.name || details?.product_name;
-                  itemSize = itemSize || details?.size;
-                  itemColor = itemColor || details?.color;
-                } catch {
-                  if (typeof item.product_details === 'string' && item.product_details.trim()) productName = item.product_details;
+              let quantity = item.quantity;
+              if (item.product_details) {
+                let details: any = null;
+                if (typeof item.product_details === 'string') {
+                  const raw = item.product_details.trim();
+                  if (raw.startsWith('{') || raw.startsWith('[')) {
+                    try { details = JSON.parse(raw); } catch { details = null; }
+                  }
+                  if (!details && !productName && raw) productName = raw;
+                } else if (typeof item.product_details === 'object') {
+                  details = item.product_details;
+                }
+                if (Array.isArray(details)) details = details[0];
+                if (details && typeof details === 'object') {
+                  productName = productName || details.name || details.product_name || details.title || details.name_ar || details.name_en;
+                  itemSize = itemSize || details.size;
+                  itemColor = itemColor || details.color;
+                  quantity = quantity || details.quantity || details.qty;
                 }
               }
+              quantity = quantity || 1;
+              const itemTotal = parseFloat((item.price || 0).toString()) * quantity;
               return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:13px;border-bottom:1px dashed #888;">
                 <span style="font-weight:900;font-size:15px;min-width:20px;">${idx + 1}.</span>
-                <span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${productName || '-'}${(itemSize || itemColor) ? ` <span style="font-weight:400;font-size:11px;">(${[itemSize, itemColor].filter(Boolean).join(' · ')})</span>` : ''}</span>
+                <span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${productName || 'منتج'}${(itemSize || itemColor) ? ` <span style="font-weight:400;font-size:11px;">(${[itemSize, itemColor].filter(Boolean).join(' · ')})</span>` : ''}</span>
                 <span style="font-weight:700;min-width:32px;text-align:center;">×${quantity}</span>
                 <span style="font-weight:900;min-width:65px;text-align:left;">${itemTotal.toFixed(0)} ج.م</span>
               </div>`;
