@@ -89,7 +89,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-4xl font-bold">لوحة التحكم</h1>
-            <p className="text-muted-foreground">إدارة متجر Family Fashion</p>
+            <p className="text-muted-foreground">إدارة متجر الصقر اكسبريس</p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">

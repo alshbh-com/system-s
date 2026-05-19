@@ -50,7 +50,7 @@ const Appearance = () => {
               <Input
                 value={editPlatformName}
                 onChange={(e) => setEditPlatformName(e.target.value)}
-                placeholder="Family Fashion"
+                placeholder="الصقر اكسبريس"
                 className="mt-1"
               />
             </div>
@@ -59,7 +59,7 @@ const Appearance = () => {
               <Input
                 value={editInvoiceName}
                 onChange={(e) => setEditInvoiceName(e.target.value)}
-                placeholder="Family Fashion"
+                placeholder="الصقر اكسبريس"
                 className="mt-1"
               />
             </div>
