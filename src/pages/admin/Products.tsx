@@ -104,10 +104,10 @@ const Products = () => {
         price: parseFloat(data.price),
         offer_price: data.offer_price ? parseFloat(data.offer_price) : null,
         stock: parseInt(data.stock),
-        size_options: data.size_options?.length > 0 ? data.size_options : null,
-        color_options: data.color_options?.length > 0 ? data.color_options : null,
+        size_options: data.size_options?.length > 0 ? data.size_options : [],
+        color_options: data.color_options?.length > 0 ? data.color_options : [],
         details: data.details || null,
-        quantity_pricing: quantityPricing.length > 0 ? quantityPricing : null,
+        quantity_pricing: quantityPricing.length > 0 ? quantityPricing : [],
         category_id: data.category_id && data.category_id.trim() !== "" ? data.category_id : null
       };
       
