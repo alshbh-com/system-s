@@ -14,6 +14,41 @@ import * as XLSX from "xlsx";
 import { useTheme } from "@/contexts/ThemeContext";
 import { generateBarcodeDataUrl } from "@/lib/barcodeUtils";
 
+type InvoiceItemRow = {
+  productName: string;
+  itemSize?: string;
+  itemColor?: string;
+  quantity: number;
+  price: number;
+};
+
+type InvoiceOrder = {
+  id: string;
+  order_number?: string | number;
+  total_amount: string | number;
+  shipping_cost?: string | number | null;
+  order_details?: string | null;
+  order_items?: Array<{
+    products?: { name?: string; name_ar?: string; name_en?: string } | null;
+    size?: string | null;
+    color?: string | null;
+    quantity?: number | null;
+    price?: string | number | null;
+    product_details?: unknown;
+  }>;
+  created_at: string;
+  tracking_code?: string | null;
+  customers?: { name?: string; phone?: string; phone2?: string; governorate?: string; address?: string } | null;
+  governorates?: { name?: string } | null;
+  delivery_agents?: { name?: string; serial_number?: string } | null;
+  notes?: string | null;
+};
+
+type OfficeOption = { id: string; name: string; watermark_name?: string | null; logo_url?: string | null };
+
+const asText = (value: unknown) => (typeof value === "string" || typeof value === "number" ? String(value) : undefined);
+const asNumber = (value: unknown) => Number(value) || undefined;
+
 
 const Invoices = () => {
   const navigate = useNavigate();
