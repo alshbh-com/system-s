@@ -215,18 +215,18 @@ const Invoices = () => {
     XLSX.writeFile(wb, fileName);
   };
 
-  const generateInvoiceCell = (order: any, brandName: string, watermarkText: string, logoUrl: string | null) => {
+  const generateInvoiceCell = (order: InvoiceOrder, brandName: string, watermarkText: string, logoUrl: string | null) => {
     const totalAmount = parseFloat(order.total_amount.toString());
     const customerShipping = parseFloat((order.shipping_cost || 0).toString());
     const totalPrice = totalAmount + customerShipping;
-    const normalizeInvoiceItems = (sourceOrder: any) => {
-      const dbItems = (sourceOrder.order_items || []).map((item: any) => {
+    const normalizeInvoiceItems = (sourceOrder: InvoiceOrder): InvoiceItemRow[] => {
+      const dbItems = (sourceOrder.order_items || []).map((item): InvoiceItemRow => {
         let productName = item.products?.name || item.products?.name_ar || item.products?.name_en;
-        let itemSize = item.size;
-        let itemColor = item.color;
-        let quantity = item.quantity;
+        let itemSize = item.size || undefined;
+        let itemColor = item.color || undefined;
+        let quantity = item.quantity || undefined;
         if (item.product_details) {
-          let details: any = null;
+          let details: Record<string, unknown> | null = null;
           if (typeof item.product_details === 'string') {
             const raw = item.product_details.trim();
             if (raw.startsWith('{') || raw.startsWith('[')) {
@@ -238,10 +238,10 @@ const Invoices = () => {
           }
           if (Array.isArray(details)) details = details[0];
           if (details && typeof details === 'object') {
-            productName = productName || details.name || details.product_name || details.title || details.name_ar || details.name_en;
-            itemSize = itemSize || details.size || details.variant;
-            itemColor = itemColor || details.color;
-            quantity = quantity || details.quantity || details.qty || details.count;
+            productName = productName || asText(details.name) || asText(details.product_name) || asText(details.title) || asText(details.name_ar) || asText(details.name_en);
+            itemSize = itemSize || asText(details.size) || asText(details.variant);
+            itemColor = itemColor || asText(details.color);
+            quantity = quantity || asNumber(details.quantity) || asNumber(details.qty) || asNumber(details.count);
           }
         }
         return { productName: productName || 'منتج', itemSize, itemColor, quantity: quantity || 1, price: parseFloat((item.price || 0).toString()) };
@@ -252,22 +252,24 @@ const Invoices = () => {
       const rawDetails = (sourceOrder.order_details || '').toString().trim();
       if (!rawDetails) return [];
 
-      let parsed: any = null;
+      let parsed: unknown = null;
       if (rawDetails.startsWith('{') || rawDetails.startsWith('[')) {
         try { parsed = JSON.parse(rawDetails); } catch { parsed = null; }
       }
 
       if (parsed) {
-        const possibleItems = Array.isArray(parsed) ? parsed : (parsed.items || parsed.products || parsed.order_items || parsed.cart || []);
+        const parsedRecord = parsed as Record<string, unknown>;
+        const possibleItems = Array.isArray(parsed) ? parsed : (parsedRecord.items || parsedRecord.products || parsedRecord.order_items || parsedRecord.cart || []);
         if (Array.isArray(possibleItems) && possibleItems.length > 0) {
-          return possibleItems.map((item: any) => {
-            const quantity = Number(item.quantity || item.qty || item.count || 1) || 1;
+          return possibleItems.map((item): InvoiceItemRow => {
+            const itemRecord = item as Record<string, unknown>;
+            const quantity = asNumber(itemRecord.quantity) || asNumber(itemRecord.qty) || asNumber(itemRecord.count) || 1;
             return {
-              productName: item.name || item.product_name || item.title || item.name_ar || item.name_en || 'منتج',
-              itemSize: item.size || item.variant,
-              itemColor: item.color,
+              productName: asText(itemRecord.name) || asText(itemRecord.product_name) || asText(itemRecord.title) || asText(itemRecord.name_ar) || asText(itemRecord.name_en) || 'منتج',
+              itemSize: asText(itemRecord.size) || asText(itemRecord.variant),
+              itemColor: asText(itemRecord.color),
               quantity,
-              price: parseFloat((item.price || item.unit_price || item.total || 0).toString()) || (possibleItems.length === 1 ? totalAmount / quantity : 0)
+              price: asNumber(itemRecord.price) || asNumber(itemRecord.unit_price) || asNumber(itemRecord.total) || (possibleItems.length === 1 ? totalAmount / quantity : 0)
             };
           });
         }
@@ -341,7 +343,7 @@ const Invoices = () => {
             <span>الكمية · السعر</span>
           </div>
           <div style="flex:1;padding:3px 0;">
-            ${invoiceItems.map((item: any, idx: number) => {
+            ${invoiceItems.map((item, idx) => {
               const itemTotal = item.price * item.quantity;
               return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:13px;border-bottom:1px dashed #888;">
                 <span style="font-weight:900;font-size:15px;min-width:20px;">${idx + 1}.</span>
