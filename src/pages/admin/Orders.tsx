@@ -536,78 +536,113 @@ const Orders = () => {
       const shippingCost = parseFloat(order.shipping_cost?.toString() || "0");
       const finalAmount = totalAmount + shippingCost;
 
-      return `
-        <div class="invoice" style="page-break-after: always; padding: 0; position: relative; font-family: 'Cairo','Tajawal',Arial,sans-serif; color:#0b1f33;">
-          <div class="watermark" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:110px; font-weight:900; color:rgba(11,31,51,0.05); transform:rotate(-25deg); pointer-events:none; z-index:0;">الصقر اكسبريس</div>
+      // Build numbered items list (instead of a table)
+      let itemsListHtml = '';
+      const itemsArr: any[] = [];
+      if (order.order_details) {
+        try {
+          const parsed = JSON.parse(order.order_details);
+          if (Array.isArray(parsed)) parsed.forEach((it: any) => itemsArr.push({
+            name: it.name || '-', size: it.size || '-', color: it.color || '-', price: parseFloat(it.price?.toString() || '0')
+          }));
+        } catch (e) {}
+      }
+      if (itemsArr.length === 0 && order.order_items) {
+        const formatted = getFormattedItems(order.order_items);
+        formatted?.forEach((it: any) => itemsArr.push({
+          name: it.name, size: formatSizesDisplay(it.sizes), color: it.color || '-', price: it.totalPrice
+        }));
+      }
+      itemsListHtml = itemsArr.map((it, idx) => `
+        <div style="display:flex; align-items:stretch; margin-bottom:6px; border:1px solid #e3e8ef; border-radius:6px; overflow:hidden; font-size:12px;">
+          <div style="width:32px; background:#0b1f33; color:#d4af37; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px;">${idx + 1}</div>
+          <div style="flex:1; padding:7px 10px;">
+            <div style="font-weight:700; color:#0b1f33;">${it.name}</div>
+            <div style="font-size:10px; color:#6b7280; margin-top:2px;">المقاس: ${it.size} · اللون: ${it.color}</div>
+          </div>
+          <div style="padding:7px 12px; background:#fafbfc; display:flex; align-items:center; font-weight:700; color:#0b1f33; border-right:1px dashed #d4af37;">${it.price.toFixed(2)} ج.م</div>
+        </div>
+      `).join('');
 
-          <div style="position:relative; z-index:1; padding:24px;">
-            <!-- Header band -->
-            <div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#0b1f33 0%,#1a3a5c 60%,#d4af37 100%); color:#fff; padding:18px 22px; border-radius:14px; box-shadow:0 4px 12px rgba(11,31,51,0.2);">
-              <div style="display:flex; align-items:center; gap:14px;">
-                <div style="width:56px; height:56px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:32px;">🦅</div>
-                <div>
-                  <div style="font-size:26px; font-weight:900; letter-spacing:1px;">الصقر اكسبريس</div>
-                  <div style="font-size:12px; opacity:.85; margin-top:2px;">شحن سريع · توصيل آمن · ثقة دائمة</div>
+      const trackCode = (order as any).tracking_code || `TRK-${(order.order_number || '').toString().padStart(6,'0')}`;
+      // Fake barcode bars
+      const barcode = Array.from({length: 50}, () => {
+        const w = [1,2,3][Math.floor(Math.random()*3)];
+        const bg = Math.random() > 0.4 ? '#0b1f33' : 'transparent';
+        return `<span style="display:inline-block; width:${w}px; height:36px; background:${bg};"></span>`;
+      }).join('');
+
+      return `
+        <div class="invoice" style="page-break-after: always; padding:0; position:relative; font-family:'Cairo','Tajawal',Arial,sans-serif; color:#0b1f33; display:flex; min-height:auto;">
+          <!-- Vertical side ribbon -->
+          <div style="width:42px; background:linear-gradient(180deg,#0b1f33,#1a3a5c); color:#d4af37; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:14px 0;">
+            <div style="font-weight:900; font-size:18px; transform:rotate(180deg); writing-mode:vertical-rl;">SAQR · EXPRESS</div>
+            <div style="font-size:11px; transform:rotate(180deg); writing-mode:vertical-rl; opacity:.8;">${new Date(order.created_at).toLocaleDateString('ar-EG')}</div>
+          </div>
+
+          <!-- Main content -->
+          <div style="flex:1; padding:18px 22px; position:relative;">
+            <!-- Top shipping-label area: FROM / TO -->
+            <div style="display:flex; gap:10px; align-items:stretch;">
+              <div style="flex:1; border:1.5px solid #0b1f33; border-radius:8px; padding:10px 12px; position:relative;">
+                <div style="position:absolute; top:-9px; right:10px; background:#0b1f33; color:#d4af37; padding:1px 8px; font-size:10px; font-weight:700; border-radius:3px;">المرسل</div>
+                <div style="font-weight:900; font-size:16px; margin-top:2px;">🦅 الصقر اكسبريس</div>
+                <div style="font-size:10px; color:#6b7280; margin-top:3px; line-height:1.6;">شحن سريع · توصيل آمن<br/>خدمة عملاء 24/7</div>
+              </div>
+              <div style="flex:1.4; border:1.5px dashed #d4af37; border-radius:8px; padding:10px 12px; position:relative; background:#fffdf5;">
+                <div style="position:absolute; top:-9px; right:10px; background:#d4af37; color:#0b1f33; padding:1px 8px; font-size:10px; font-weight:700; border-radius:3px;">المستلم</div>
+                <div style="font-weight:900; font-size:15px; margin-top:2px;">${order.customers?.name || '-'}</div>
+                <div style="font-size:11px; line-height:1.7; margin-top:3px;">
+                  📞 ${order.customers?.phone || '-'}${(order.customers as any)?.phone2 ? ` · ${(order.customers as any).phone2}` : ''}<br/>
+                  📍 ${order.customers?.governorate || '-'} — ${order.customers?.address || '-'}
                 </div>
               </div>
-              <div style="text-align:left; background:rgba(255,255,255,0.12); padding:10px 14px; border-radius:10px; border:1px dashed rgba(255,255,255,0.4);">
-                <div style="font-size:11px; opacity:.85;">رقم الفاتورة</div>
-                <div style="font-size:20px; font-weight:900; color:#ffd76a;">#${order.order_number || order.id.slice(0, 8)}</div>
+            </div>
+
+            <!-- Barcode + order number bar -->
+            <div style="margin-top:12px; background:#0b1f33; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; color:#fff;">
+              <div>
+                <div style="font-size:10px; color:#d4af37; letter-spacing:2px;">ORDER · رقم الأوردر</div>
+                <div style="font-size:22px; font-weight:900; color:#fff;">#${order.order_number || order.id.slice(0,8)}</div>
+                <div style="font-size:10px; opacity:.7; margin-top:2px;">${trackCode}</div>
+              </div>
+              <div style="background:#fff; padding:6px 8px; border-radius:4px; line-height:0; max-width:60%; overflow:hidden; white-space:nowrap;">
+                ${barcode}
               </div>
             </div>
 
-            <!-- Meta strip -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 16px; background:#f5f7fb; border-right:5px solid #d4af37; border-radius:8px; font-size:13px;">
-              <div><strong>التاريخ:</strong> ${new Date(order.created_at).toLocaleDateString('ar-EG')}</div>
-              <div><strong>كود التتبع:</strong> ${(order as any).tracking_code || '-'}</div>
-              <div><strong>الحالة:</strong> ${getStatusText(order.status)}</div>
+            <!-- Items list -->
+            <div style="margin-top:12px;">
+              <div style="font-size:11px; font-weight:700; color:#0b1f33; margin-bottom:6px; padding-bottom:4px; border-bottom:2px solid #d4af37; display:inline-block;">المنتجات (${itemsArr.length})</div>
+              ${itemsListHtml}
             </div>
 
-            <!-- Customer card -->
-            <div style="margin-top:14px; border:1px solid #e3e8ef; border-radius:12px; overflow:hidden;">
-              <div style="background:#0b1f33; color:#fff; padding:8px 14px; font-weight:700; font-size:14px;">بيانات العميل</div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; padding:14px 16px; font-size:13px; line-height:1.9;">
-                <div><strong>الاسم:</strong> ${order.customers?.name || '-'}</div>
-                <div><strong>الهاتف:</strong> ${order.customers?.phone || '-'}</div>
-                ${(order.customers as any)?.phone2 ? `<div><strong>هاتف إضافي:</strong> ${(order.customers as any).phone2}</div>` : '<div></div>'}
-                <div><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</div>
-                <div style="grid-column:1 / -1;"><strong>العنوان:</strong> ${order.customers?.address || '-'}</div>
-                ${order.notes ? `<div style="grid-column:1 / -1; background:#fff8e1; padding:6px 10px; border-radius:6px; border-right:3px solid #d4af37;"><strong>ملاحظات:</strong> ${order.notes}</div>` : ''}
+            ${order.notes ? `<div style="margin-top:10px; background:#fff8e1; padding:8px 12px; border-radius:6px; border-right:3px solid #d4af37; font-size:11px;"><strong>ملاحظات:</strong> ${order.notes}</div>` : ''}
+
+            <!-- Totals row (horizontal strip) -->
+            <div style="margin-top:14px; display:flex; align-items:stretch; border-radius:8px; overflow:hidden; border:1px solid #0b1f33;">
+              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
+                <div style="color:#6b7280;">المنتجات</div>
+                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${totalAmount.toFixed(2)} ج.م</div>
+              </div>
+              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
+                <div style="color:#6b7280;">الشحن</div>
+                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${shippingCost.toFixed(2)} ج.م</div>
+              </div>
+              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
+                <div style="color:#6b7280;">الحالة</div>
+                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${getStatusText(order.status)}</div>
+              </div>
+              <div style="flex:1.4; padding:10px 14px; text-align:center; background:linear-gradient(135deg,#d4af37,#f4d56b); color:#0b1f33;">
+                <div style="font-size:11px;">الإجمالي المستحق</div>
+                <div style="font-size:20px; font-weight:900; margin-top:2px;">${finalAmount.toFixed(2)} ج.م</div>
               </div>
             </div>
 
-            <!-- Items table -->
-            <table style="width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:13px; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-              <thead>
-                <tr style="background:linear-gradient(90deg,#0b1f33,#1a3a5c); color:#fff;">
-                  <th style="padding:11px; text-align:center; font-weight:700;">المنتج</th>
-                  <th style="padding:11px; text-align:center; font-weight:700;">المقاس</th>
-                  <th style="padding:11px; text-align:center; font-weight:700;">اللون</th>
-                  <th style="padding:11px; text-align:center; font-weight:700;">السعر</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${orderItemsHtml.replace(/border: 1px solid #000/g, 'border-bottom:1px solid #e3e8ef; border-left:none; border-right:none; border-top:none')}
-              </tbody>
-            </table>
-
-            <!-- Totals -->
-            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:18px;">
-              <div style="max-width:55%; font-size:11px; color:#6b7280; line-height:1.7;">
-                <div style="font-weight:700; color:#0b1f33; margin-bottom:4px;">شكراً لتعاملكم مع الصقر اكسبريس</div>
-                برجاء مراجعة محتويات الطرد قبل استلامها. لا يمكن استرجاع المنتج بعد فتح الطرد إلا في حالة العيب الصناعي.
-              </div>
-              <div style="min-width:240px; background:linear-gradient(135deg,#d4af37,#f4d56b); color:#0b1f33; padding:14px 18px; border-radius:12px; box-shadow:0 4px 10px rgba(212,175,55,0.35);">
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;"><span>المنتجات</span><span>${totalAmount.toFixed(2)} ج.م</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;"><span>الشحن</span><span>${shippingCost.toFixed(2)} ج.م</span></div>
-                <div style="border-top:1px dashed rgba(11,31,51,0.4); margin:6px 0;"></div>
-                <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:900;"><span>الإجمالي</span><span>${finalAmount.toFixed(2)} ج.م</span></div>
-              </div>
-            </div>
-
-            <!-- Footer -->
-            <div style="margin-top:20px; text-align:center; padding-top:10px; border-top:2px dashed #d4af37; font-size:11px; color:#6b7280;">
-              الصقر اكسبريس · شحن وتوصيل · للاستفسار يرجى التواصل على رقم خدمة العملاء
+            <!-- Footer note -->
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#6b7280; padding-top:6px; border-top:1px dotted #cbd5e1;">
+              <div>برجاء مراجعة الطرد قبل الاستلام · لا يُسترجع المنتج بعد الفتح إلا في حالة العيب الصناعي.</div>
+              <div style="color:#0b1f33; font-weight:700;">شكراً لاختياركم الصقر اكسبريس</div>
             </div>
           </div>
         </div>
