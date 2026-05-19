@@ -537,39 +537,78 @@ const Orders = () => {
       const finalAmount = totalAmount + shippingCost;
 
       return `
-        <div style="page-break-after: always; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="font-size: 32px; font-weight: bold; color: #d4af37; margin: 0;">الصقر اكسبريس</h1>
-          </div>
-          <h2 style="text-align: center; margin: 10px 0; font-size: 18px;">فاتورة</h2>
-          <hr style="border: 1px solid #ddd;"/>
-          <div style="margin: 15px 0; line-height: 1.8;">
-            <p style="margin: 5px 0;"><strong>رقم الأوردر:</strong> #${order.order_number || order.id.slice(0, 8)}</p>
-            <p style="margin: 5px 0;"><strong>التاريخ:</strong> ${new Date(order.created_at).toLocaleDateString('ar-EG')}</p>
-            <p style="margin: 5px 0;"><strong>اسم العميل:</strong> ${order.customers?.name}</p>
-            <p style="margin: 5px 0;"><strong>الهاتف:</strong> ${order.customers?.phone}</p>
-            ${(order.customers as any)?.phone2 ? `<p style="margin: 5px 0;"><strong>هاتف إضافي:</strong> ${(order.customers as any).phone2}</p>` : ''}
-            <p style="margin: 5px 0;"><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</p>
-            <p style="margin: 5px 0;"><strong>العنوان:</strong> ${order.customers?.address}</p>
-            ${order.notes ? `<p style="margin: 5px 0;"><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-          </div>
-          <hr style="border: 1px solid #ddd;"/>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            <thead>
-              <tr>
-                <th style="border: 1px solid #000; padding: 10px; background-color: #f8f8f8;">المنتج</th>
-                <th style="border: 1px solid #000; padding: 10px; background-color: #f8f8f8;">المقاس</th>
-                <th style="border: 1px solid #000; padding: 10px; background-color: #f8f8f8;">اللون</th>
-                <th style="border: 1px solid #000; padding: 10px; background-color: #f8f8f8;">السعر</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItemsHtml}
-            </tbody>
-          </table>
-          <hr style="border: 1px solid #ddd; margin-top: 15px;"/>
-          <div style="margin-top: 15px; text-align: left;">
-            <p style="font-size: 18px; font-weight: bold;"><strong>الإجمالي:</strong> ${finalAmount.toFixed(2)} ج.م</p>
+        <div class="invoice" style="page-break-after: always; padding: 0; position: relative; font-family: 'Cairo','Tajawal',Arial,sans-serif; color:#0b1f33;">
+          <div class="watermark" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:110px; font-weight:900; color:rgba(11,31,51,0.05); transform:rotate(-25deg); pointer-events:none; z-index:0;">الصقر اكسبريس</div>
+
+          <div style="position:relative; z-index:1; padding:24px;">
+            <!-- Header band -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg,#0b1f33 0%,#1a3a5c 60%,#d4af37 100%); color:#fff; padding:18px 22px; border-radius:14px; box-shadow:0 4px 12px rgba(11,31,51,0.2);">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:56px; height:56px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:32px;">🦅</div>
+                <div>
+                  <div style="font-size:26px; font-weight:900; letter-spacing:1px;">الصقر اكسبريس</div>
+                  <div style="font-size:12px; opacity:.85; margin-top:2px;">شحن سريع · توصيل آمن · ثقة دائمة</div>
+                </div>
+              </div>
+              <div style="text-align:left; background:rgba(255,255,255,0.12); padding:10px 14px; border-radius:10px; border:1px dashed rgba(255,255,255,0.4);">
+                <div style="font-size:11px; opacity:.85;">رقم الفاتورة</div>
+                <div style="font-size:20px; font-weight:900; color:#ffd76a;">#${order.order_number || order.id.slice(0, 8)}</div>
+              </div>
+            </div>
+
+            <!-- Meta strip -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:10px 16px; background:#f5f7fb; border-right:5px solid #d4af37; border-radius:8px; font-size:13px;">
+              <div><strong>التاريخ:</strong> ${new Date(order.created_at).toLocaleDateString('ar-EG')}</div>
+              <div><strong>كود التتبع:</strong> ${(order as any).tracking_code || '-'}</div>
+              <div><strong>الحالة:</strong> ${getStatusText(order.status)}</div>
+            </div>
+
+            <!-- Customer card -->
+            <div style="margin-top:14px; border:1px solid #e3e8ef; border-radius:12px; overflow:hidden;">
+              <div style="background:#0b1f33; color:#fff; padding:8px 14px; font-weight:700; font-size:14px;">بيانات العميل</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; padding:14px 16px; font-size:13px; line-height:1.9;">
+                <div><strong>الاسم:</strong> ${order.customers?.name || '-'}</div>
+                <div><strong>الهاتف:</strong> ${order.customers?.phone || '-'}</div>
+                ${(order.customers as any)?.phone2 ? `<div><strong>هاتف إضافي:</strong> ${(order.customers as any).phone2}</div>` : '<div></div>'}
+                <div><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</div>
+                <div style="grid-column:1 / -1;"><strong>العنوان:</strong> ${order.customers?.address || '-'}</div>
+                ${order.notes ? `<div style="grid-column:1 / -1; background:#fff8e1; padding:6px 10px; border-radius:6px; border-right:3px solid #d4af37;"><strong>ملاحظات:</strong> ${order.notes}</div>` : ''}
+              </div>
+            </div>
+
+            <!-- Items table -->
+            <table style="width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:13px; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+              <thead>
+                <tr style="background:linear-gradient(90deg,#0b1f33,#1a3a5c); color:#fff;">
+                  <th style="padding:11px; text-align:center; font-weight:700;">المنتج</th>
+                  <th style="padding:11px; text-align:center; font-weight:700;">المقاس</th>
+                  <th style="padding:11px; text-align:center; font-weight:700;">اللون</th>
+                  <th style="padding:11px; text-align:center; font-weight:700;">السعر</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${orderItemsHtml.replace(/border: 1px solid #000/g, 'border-bottom:1px solid #e3e8ef; border-left:none; border-right:none; border-top:none')}
+              </tbody>
+            </table>
+
+            <!-- Totals -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:18px;">
+              <div style="max-width:55%; font-size:11px; color:#6b7280; line-height:1.7;">
+                <div style="font-weight:700; color:#0b1f33; margin-bottom:4px;">شكراً لتعاملكم مع الصقر اكسبريس</div>
+                برجاء مراجعة محتويات الطرد قبل استلامها. لا يمكن استرجاع المنتج بعد فتح الطرد إلا في حالة العيب الصناعي.
+              </div>
+              <div style="min-width:240px; background:linear-gradient(135deg,#d4af37,#f4d56b); color:#0b1f33; padding:14px 18px; border-radius:12px; box-shadow:0 4px 10px rgba(212,175,55,0.35);">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;"><span>المنتجات</span><span>${totalAmount.toFixed(2)} ج.م</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;"><span>الشحن</span><span>${shippingCost.toFixed(2)} ج.م</span></div>
+                <div style="border-top:1px dashed rgba(11,31,51,0.4); margin:6px 0;"></div>
+                <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:900;"><span>الإجمالي</span><span>${finalAmount.toFixed(2)} ج.م</span></div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="margin-top:20px; text-align:center; padding-top:10px; border-top:2px dashed #d4af37; font-size:11px; color:#6b7280;">
+              الصقر اكسبريس · شحن وتوصيل · للاستفسار يرجى التواصل على رقم خدمة العملاء
+            </div>
           </div>
         </div>
       `;
