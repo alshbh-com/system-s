@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE orders, agent_payments, returns, order_items, delivery_agents;

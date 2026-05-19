@@ -1,0 +1,1 @@
+ALTER TABLE public.cashbox_transactions ADD COLUMN payment_method text DEFAULT 'cash';
