@@ -14,6 +14,41 @@ import * as XLSX from "xlsx";
 import { useTheme } from "@/contexts/ThemeContext";
 import { generateBarcodeDataUrl } from "@/lib/barcodeUtils";
 
+type InvoiceItemRow = {
+  productName: string;
+  itemSize?: string;
+  itemColor?: string;
+  quantity: number;
+  price: number;
+};
+
+type InvoiceOrder = {
+  id: string;
+  order_number?: string | number;
+  total_amount: string | number;
+  shipping_cost?: string | number | null;
+  order_details?: string | null;
+  order_items?: Array<{
+    products?: { name?: string; name_ar?: string; name_en?: string } | null;
+    size?: string | null;
+    color?: string | null;
+    quantity?: number | null;
+    price?: string | number | null;
+    product_details?: unknown;
+  }>;
+  created_at: string;
+  tracking_code?: string | null;
+  customers?: { name?: string; phone?: string; phone2?: string; governorate?: string; address?: string } | null;
+  governorates?: { name?: string } | null;
+  delivery_agents?: { name?: string; serial_number?: string } | null;
+  notes?: string | null;
+};
+
+type OfficeOption = { id: string; name: string; watermark_name?: string | null; logo_url?: string | null };
+
+const asText = (value: unknown) => (typeof value === "string" || typeof value === "number" ? String(value) : undefined);
+const asNumber = (value: unknown) => Number(value) || undefined;
+
 
 const Invoices = () => {
   const navigate = useNavigate();
@@ -180,10 +215,85 @@ const Invoices = () => {
     XLSX.writeFile(wb, fileName);
   };
 
-  const generateInvoiceCell = (order: any, brandName: string, watermarkText: string, logoUrl: string | null) => {
+  const generateInvoiceCell = (order: InvoiceOrder, brandName: string, watermarkText: string, logoUrl: string | null) => {
     const totalAmount = parseFloat(order.total_amount.toString());
     const customerShipping = parseFloat((order.shipping_cost || 0).toString());
     const totalPrice = totalAmount + customerShipping;
+    const normalizeInvoiceItems = (sourceOrder: InvoiceOrder): InvoiceItemRow[] => {
+      const dbItems = (sourceOrder.order_items || []).map((item): InvoiceItemRow => {
+        let productName = item.products?.name || item.products?.name_ar || item.products?.name_en;
+        let itemSize = item.size || undefined;
+        let itemColor = item.color || undefined;
+        let quantity = item.quantity || undefined;
+        if (item.product_details) {
+          let details: Record<string, unknown> | null = null;
+          if (typeof item.product_details === 'string') {
+            const raw = item.product_details.trim();
+            if (raw.startsWith('{') || raw.startsWith('[')) {
+              try { details = JSON.parse(raw); } catch { details = null; }
+            }
+            if (!details && !productName && raw) productName = raw;
+          } else if (typeof item.product_details === 'object') {
+            details = item.product_details as Record<string, unknown>;
+          }
+          if (Array.isArray(details)) details = details[0] as Record<string, unknown>;
+          if (details && typeof details === 'object') {
+            productName = productName || asText(details.name) || asText(details.product_name) || asText(details.title) || asText(details.name_ar) || asText(details.name_en);
+            itemSize = itemSize || asText(details.size) || asText(details.variant);
+            itemColor = itemColor || asText(details.color);
+            quantity = quantity || asNumber(details.quantity) || asNumber(details.qty) || asNumber(details.count);
+          }
+        }
+        return { productName: productName || 'منتج', itemSize, itemColor, quantity: quantity || 1, price: parseFloat((item.price || 0).toString()) };
+      });
+
+      if (dbItems.length > 0) return dbItems;
+
+      const rawDetails = (sourceOrder.order_details || '').toString().trim();
+      if (!rawDetails) return [];
+
+      let parsed: unknown = null;
+      if (rawDetails.startsWith('{') || rawDetails.startsWith('[')) {
+        try { parsed = JSON.parse(rawDetails); } catch { parsed = null; }
+      }
+
+      if (parsed) {
+        const parsedRecord = parsed as Record<string, unknown>;
+        const possibleItems = Array.isArray(parsed) ? parsed : (parsedRecord.items || parsedRecord.products || parsedRecord.order_items || parsedRecord.cart || []);
+        if (Array.isArray(possibleItems) && possibleItems.length > 0) {
+          return possibleItems.map((item): InvoiceItemRow => {
+            const itemRecord = item as Record<string, unknown>;
+            const quantity = asNumber(itemRecord.quantity) || asNumber(itemRecord.qty) || asNumber(itemRecord.count) || 1;
+            return {
+              productName: asText(itemRecord.name) || asText(itemRecord.product_name) || asText(itemRecord.title) || asText(itemRecord.name_ar) || asText(itemRecord.name_en) || 'منتج',
+              itemSize: asText(itemRecord.size) || asText(itemRecord.variant),
+              itemColor: asText(itemRecord.color),
+              quantity,
+              price: asNumber(itemRecord.price) || asNumber(itemRecord.unit_price) || asNumber(itemRecord.total) || (possibleItems.length === 1 ? totalAmount / quantity : 0)
+            };
+          });
+        }
+      }
+
+      return rawDetails.split(/\n|،|,/).map((line: string) => line.trim()).filter(Boolean).map((line: string, index: number, list: string[]) => {
+        const qtyMatch = line.match(/(?:×|x|X|\*)\s*(\d+)|(?:الكمية|qty|quantity)\s*[:：-]?\s*(\d+)/i);
+        const quantity = Number(qtyMatch?.[1] || qtyMatch?.[2] || 1) || 1;
+        const variantMatch = line.match(/\(([^)]+)\)/);
+        const cleanName = line
+          .replace(/(?:×|x|X|\*)\s*\d+/i, '')
+          .replace(/(?:الكمية|qty|quantity)\s*[:：-]?\s*\d+/i, '')
+          .replace(/\([^)]+\)/g, '')
+          .trim();
+        return {
+          productName: cleanName || line,
+          itemSize: undefined,
+          itemColor: variantMatch?.[1],
+          quantity,
+          price: list.length === 1 ? totalAmount / quantity : 0
+        };
+      });
+    };
+    const invoiceItems = normalizeInvoiceItems(order);
     
     const logoHtml = logoUrl 
       ? `<img src="${logoUrl}" style="max-width:40px;max-height:40px;object-fit:contain;" />`
@@ -229,41 +339,17 @@ const Invoices = () => {
         <!-- Items -->
         <div style="position:relative;z-index:1;border:2.5px solid #000;border-top:0;flex:1;display:flex;flex-direction:column;overflow:hidden;">
           <div style="background:#000;color:#fff;padding:5px 10px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;letter-spacing:1px;">
-            <span>المنتجات (${order.order_items?.length || 0})</span>
+            <span>المنتجات (${invoiceItems.length})</span>
             <span>الكمية · السعر</span>
           </div>
           <div style="flex:1;padding:3px 0;">
-            ${order.order_items?.map((item: any, idx: number) => {
-              let productName = item.products?.name || item.products?.name_ar || item.products?.name_en;
-              let itemSize = item.size;
-              let itemColor = item.color;
-              let quantity = item.quantity;
-              if (item.product_details) {
-                let details: any = null;
-                if (typeof item.product_details === 'string') {
-                  const raw = item.product_details.trim();
-                  if (raw.startsWith('{') || raw.startsWith('[')) {
-                    try { details = JSON.parse(raw); } catch { details = null; }
-                  }
-                  if (!details && !productName && raw) productName = raw;
-                } else if (typeof item.product_details === 'object') {
-                  details = item.product_details;
-                }
-                if (Array.isArray(details)) details = details[0];
-                if (details && typeof details === 'object') {
-                  productName = productName || details.name || details.product_name || details.title || details.name_ar || details.name_en;
-                  itemSize = itemSize || details.size;
-                  itemColor = itemColor || details.color;
-                  quantity = quantity || details.quantity || details.qty;
-                }
-              }
-              quantity = quantity || 1;
-              const itemTotal = parseFloat((item.price || 0).toString()) * quantity;
+            ${invoiceItems.map((item, idx) => {
+              const itemTotal = item.price * item.quantity;
               return `<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:13px;border-bottom:1px dashed #888;">
                 <span style="font-weight:900;font-size:15px;min-width:20px;">${idx + 1}.</span>
-                <span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${productName || 'منتج'}${(itemSize || itemColor) ? ` <span style="font-weight:400;font-size:11px;">(${[itemSize, itemColor].filter(Boolean).join(' · ')})</span>` : ''}</span>
-                <span style="font-weight:700;min-width:32px;text-align:center;">×${quantity}</span>
-                <span style="font-weight:900;min-width:65px;text-align:left;">${itemTotal.toFixed(0)} ج.م</span>
+                <span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.productName}${(item.itemSize || item.itemColor) ? ` <span style="font-weight:400;font-size:11px;">(${[item.itemSize, item.itemColor].filter(Boolean).join(' · ')})</span>` : ''}</span>
+                <span style="font-weight:700;min-width:32px;text-align:center;">×${item.quantity}</span>
+                <span style="font-weight:900;min-width:65px;text-align:left;">${itemTotal > 0 ? `${itemTotal.toFixed(0)} ج.م` : '—'}</span>
               </div>`;
             }).join('') || ''}
           </div>
@@ -300,7 +386,7 @@ const Invoices = () => {
     const ordersToPrint = filteredOrders?.filter(o => selectedOrders.includes(o.id));
     if (!ordersToPrint?.length) return;
 
-    const selectedOffice = offices?.find((o: any) => o.id === selectedOfficeId);
+    const selectedOffice = offices?.find((o: OfficeOption) => o.id === selectedOfficeId);
     const brandName = selectedOffice ? selectedOffice.name : invoiceName;
     const watermarkText = selectedOffice ? (selectedOffice.watermark_name || selectedOffice.name) : invoiceName;
     const logoUrl = selectedOffice?.logo_url || null;
@@ -450,7 +536,7 @@ const Invoices = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">الافتراضي ({invoiceName})</SelectItem>
-                    {offices?.map((office: any) => (
+                    {offices?.map((office: OfficeOption) => (
                       <SelectItem key={office.id} value={office.id}>
                         {office.name}
                       </SelectItem>
