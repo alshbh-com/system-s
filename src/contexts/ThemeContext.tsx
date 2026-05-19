@@ -36,8 +36,8 @@ const applyTheme = (theme: ThemePreset) => {
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [activeTheme, setActiveTheme] = useState('blue-default');
   const [activeTemplate, setActiveTemplate] = useState('classic');
-  const [platformName, setPlatformNameState] = useState('Family Fashion');
-  const [invoiceName, setInvoiceNameState] = useState('Family Fashion');
+  const [platformName, setPlatformNameState] = useState('الصقر اكسبريس');
+  const [invoiceName, setInvoiceNameState] = useState('الصقر اكسبريس');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -50,8 +50,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       if (data) {
         setActiveTheme(data.active_theme);
         setActiveTemplate(data.active_template);
-        setPlatformNameState((data as any).platform_name || 'Family Fashion');
-        setInvoiceNameState((data as any).invoice_name || 'Family Fashion');
+        setPlatformNameState((data as any).platform_name || 'الصقر اكسبريس');
+        setInvoiceNameState((data as any).invoice_name || 'الصقر اكسبريس');
         const theme = themePresets.find(t => t.id === data.active_theme);
         if (theme) applyTheme(theme);
       }
@@ -65,8 +65,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         if (newData) {
           setActiveTheme(newData.active_theme);
           setActiveTemplate(newData.active_template);
-          setPlatformNameState(newData.platform_name || 'Family Fashion');
-          setInvoiceNameState(newData.invoice_name || 'Family Fashion');
+          setPlatformNameState(newData.platform_name || 'الصقر اكسبريس');
+          setInvoiceNameState(newData.invoice_name || 'الصقر اكسبريس');
           const theme = themePresets.find(t => t.id === newData.active_theme);
           if (theme) applyTheme(theme);
         }
