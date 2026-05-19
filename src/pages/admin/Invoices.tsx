@@ -234,9 +234,9 @@ const Invoices = () => {
             }
             if (!details && !productName && raw) productName = raw;
           } else if (typeof item.product_details === 'object') {
-            details = item.product_details;
+            details = item.product_details as Record<string, unknown>;
           }
-          if (Array.isArray(details)) details = details[0];
+          if (Array.isArray(details)) details = details[0] as Record<string, unknown>;
           if (details && typeof details === 'object') {
             productName = productName || asText(details.name) || asText(details.product_name) || asText(details.title) || asText(details.name_ar) || asText(details.name_en);
             itemSize = itemSize || asText(details.size) || asText(details.variant);
