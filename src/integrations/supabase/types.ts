@@ -537,6 +537,7 @@ export type Database = {
           discount: number
           governorate_id: string | null
           id: string
+          modified_amount: number
           notes: string | null
           order_details: string | null
           order_number: number
@@ -555,6 +556,7 @@ export type Database = {
           discount?: number
           governorate_id?: string | null
           id?: string
+          modified_amount?: number
           notes?: string | null
           order_details?: string | null
           order_number?: number
@@ -573,6 +575,7 @@ export type Database = {
           discount?: number
           governorate_id?: string | null
           id?: string
+          modified_amount?: number
           notes?: string | null
           order_details?: string | null
           order_number?: number
@@ -944,22 +947,31 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          last_reset: string | null
           metadata: Json | null
           metric: string
+          total_orders: number
+          total_sales: number
           value: number
         }
         Insert: {
           created_at?: string
           id?: string
+          last_reset?: string | null
           metadata?: Json | null
           metric: string
+          total_orders?: number
+          total_sales?: number
           value?: number
         }
         Update: {
           created_at?: string
           id?: string
+          last_reset?: string | null
           metadata?: Json | null
           metric?: string
+          total_orders?: number
+          total_sales?: number
           value?: number
         }
         Relationships: []
@@ -1017,7 +1029,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_old_activity_logs: { Args: never; Returns: undefined }
+      reset_order_sequence: { Args: never; Returns: undefined }
     }
     Enums: {
       order_status:
@@ -1035,6 +1048,7 @@ export type Database = {
         | "postponed"
         | "cancelled"
         | "agent_deleted"
+        | "delivered_with_modification"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1177,6 +1191,7 @@ export const Constants = {
         "postponed",
         "cancelled",
         "agent_deleted",
+        "delivered_with_modification",
       ],
     },
   },
