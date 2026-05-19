@@ -386,7 +386,7 @@ const Invoices = () => {
     const ordersToPrint = filteredOrders?.filter(o => selectedOrders.includes(o.id));
     if (!ordersToPrint?.length) return;
 
-    const selectedOffice = offices?.find((o: any) => o.id === selectedOfficeId);
+    const selectedOffice = offices?.find((o: OfficeOption) => o.id === selectedOfficeId);
     const brandName = selectedOffice ? selectedOffice.name : invoiceName;
     const watermarkText = selectedOffice ? (selectedOffice.watermark_name || selectedOffice.name) : invoiceName;
     const logoUrl = selectedOffice?.logo_url || null;
@@ -536,7 +536,7 @@ const Invoices = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="default">الافتراضي ({invoiceName})</SelectItem>
-                    {offices?.map((office: any) => (
+                    {offices?.map((office: OfficeOption) => (
                       <SelectItem key={office.id} value={office.id}>
                         {office.name}
                       </SelectItem>
