@@ -357,18 +357,18 @@ const Invoices = () => {
 
         <!-- Totals row -->
         <div style="position:relative;z-index:1;border:2.5px solid #000;border-top:0;display:flex;align-items:stretch;">
-          <div style="flex:1;padding:5px 8px;text-align:center;font-size:12px;border-left:1.5px solid #000;">
-            <div>المنتجات</div><div style="font-weight:900;font-size:15px;">${totalAmount.toFixed(0)}</div>
+          <div style="flex:1;padding:4px 6px;text-align:center;font-size:11px;border-left:1.5px solid #000;">
+            <div>المنتجات</div><div style="font-weight:900;font-size:14px;">${totalAmount.toFixed(0)}</div>
           </div>
-          <div style="flex:1;padding:5px 8px;text-align:center;font-size:12px;border-left:1.5px solid #000;">
-            <div>الشحن</div><div style="font-weight:900;font-size:15px;">${customerShipping.toFixed(0)}</div>
+          <div style="flex:1;padding:4px 6px;text-align:center;font-size:11px;border-left:1.5px solid #000;">
+            <div>الشحن</div><div style="font-weight:900;font-size:14px;">${customerShipping.toFixed(0)}</div>
           </div>
-          <div style="flex:1.2;padding:5px 8px;text-align:center;font-size:12px;border-left:1.5px solid #000;">
-            <div>المندوب</div><div style="font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.delivery_agents?.name || "—"}</div>
+          <div style="flex:1;padding:4px 6px;text-align:center;font-size:11px;border-left:1.5px solid #000;">
+            <div>المندوب</div><div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${order.delivery_agents?.name || "—"}</div>
           </div>
-          <div style="flex:1.6;padding:7px 10px;text-align:center;background:#000;color:#fff;">
-            <div style="font-size:12px;letter-spacing:1px;">الإجمالي</div>
-            <div style="font-size:24px;font-weight:900;line-height:1;">${totalPrice.toFixed(0)} ج.م</div>
+          <div style="flex:3;padding:10px 14px;text-align:center;background:#000;color:#fff;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-size:14px;letter-spacing:3px;font-weight:700;">الإجمالي المطلوب</div>
+            <div style="font-size:40px;font-weight:900;line-height:1;margin-top:3px;">${totalPrice.toFixed(0)} <span style="font-size:20px;">ج.م</span></div>
           </div>
         </div>
 
