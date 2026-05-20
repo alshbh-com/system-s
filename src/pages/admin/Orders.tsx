@@ -10,7 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, UserCheck, Printer, Download, Barcode, Plus } from "lucide-react";
+import { ArrowLeft, UserCheck, Printer, Download, Barcode, Plus, Upload } from "lucide-react";
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -746,10 +747,23 @@ const Orders = () => {
                     <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">مشاهدة فقط</span>
                   )}
                   {canEditOrders && (
+                  <>
                   <Button onClick={() => setManualOrderDialogOpen(true)} size="sm" variant="outline">
                     <Plus className="ml-2 h-4 w-4" />
                     إضافة يدوي
                   </Button>
+                  <Button onClick={() => excelInputRef.current?.click()} size="sm" variant="outline" disabled={excelImporting}>
+                    <Upload className="ml-2 h-4 w-4" />
+                    {excelImporting ? "جاري الرفع..." : "رفع Excel"}
+                  </Button>
+                  <input
+                    ref={excelInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={handleExcelImport}
+                  />
+                  </>
                   )}
                 </div>
                 {selectedOrders.length > 0 && (
