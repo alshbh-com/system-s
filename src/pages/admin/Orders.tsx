@@ -38,6 +38,133 @@ const Orders = () => {
   const [officeName, setOfficeName] = useState<string>("");
   const [editingNotes, setEditingNotes] = useState<{ [key: string]: string }>({});
   const [manualOrderDialogOpen, setManualOrderDialogOpen] = useState(false);
+  const excelInputRef = useRef<HTMLInputElement | null>(null);
+  const [excelImporting, setExcelImporting] = useState(false);
+
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExcelImporting(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      if (!rows.length) {
+        toast.error("الملف فارغ");
+        setExcelImporting(false);
+        if (excelInputRef.current) excelInputRef.current.value = "";
+        return;
+      }
+
+      const pick = (row: Record<string, unknown>, keys: string[]) => {
+        for (const k of keys) {
+          const v = row[k];
+          if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+        }
+        return "";
+      };
+
+      let success = 0;
+      let failed = 0;
+
+      for (const row of rows) {
+        try {
+          const customerName = pick(row, ["اسم العميل", "العميل", "الاسم", "name", "customer_name"]) || "عميل غير محدد";
+          const phone = pick(row, ["الهاتف", "رقم الهاتف", "تليفون", "phone"]) || "";
+          const address = pick(row, ["العنوان", "address"]) || "غير محدد";
+          const govName = pick(row, ["المحافظة", "governorate"]);
+          const productName = pick(row, ["اسم المنتج", "المنتج", "product", "product_name"]);
+          const productPrice = parseFloat(pick(row, ["السعر", "سعر المنتج", "price"])) || 0;
+          const quantity = parseInt(pick(row, ["الكمية", "qty", "quantity"])) || 1;
+          const productSize = pick(row, ["المقاس", "size"]);
+          const productColor = pick(row, ["اللون", "color"]);
+          const shippingInput = parseFloat(pick(row, ["الشحن", "شحن", "shipping", "shipping_cost"]));
+
+          if (!phone) { failed++; continue; }
+
+          const selectedGov = govName
+            ? governorates?.find(g => g.name?.trim() === govName.trim())
+            : undefined;
+
+          // Find or create customer by phone
+          let customerId: string | null = null;
+          const { data: existingCustomer } = await supabase
+            .from("customers")
+            .select("id")
+            .eq("phone", phone)
+            .maybeSingle();
+
+          if (existingCustomer) {
+            customerId = existingCustomer.id;
+            await supabase.from("customers").update({
+              name: customerName,
+              address,
+              governorate: selectedGov?.name || govName || null
+            }).eq("id", existingCustomer.id);
+          } else {
+            const { data: customer, error: cErr } = await supabase
+              .from("customers")
+              .insert({ name: customerName, phone, address, governorate: selectedGov?.name || govName || null })
+              .select().single();
+            if (cErr) throw cErr;
+            customerId = customer.id;
+          }
+
+          const totalProductPrice = productPrice * quantity;
+          const shippingCost = !isNaN(shippingInput) && shippingInput > 0
+            ? shippingInput
+            : (selectedGov?.shipping_cost || 0);
+
+          const productDetails = productName ? [{
+            name: productName, quantity, price: productPrice,
+            size: productSize || null, color: productColor || null
+          }] : null;
+
+          const { data: order, error: oErr } = await supabase
+            .from("orders")
+            .insert({
+              customer_id: customerId,
+              total_amount: totalProductPrice,
+              shipping_cost: shippingCost,
+              governorate_id: selectedGov?.id || null,
+              status: 'pending',
+              order_details: productDetails ? JSON.stringify(productDetails) : null
+            }).select().single();
+          if (oErr) throw oErr;
+
+          if (productName) {
+            await supabase.from("order_items").insert({
+              order_id: order.id,
+              quantity,
+              price: productPrice,
+              size: productSize || null,
+              color: productColor || null,
+              product_details: JSON.stringify({
+                name: productName, price: productPrice,
+                size: productSize || null, color: productColor || null
+              })
+            });
+          }
+          success++;
+        } catch (err) {
+          console.error("Row import error:", err);
+          failed++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["all-orders"] });
+      toast.success(`تم استيراد ${success} أوردر${failed ? ` · فشل ${failed}` : ""}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل قراءة الملف");
+    } finally {
+      setExcelImporting(false);
+      if (excelInputRef.current) excelInputRef.current.value = "";
+    }
+  };
+
   const [manualOrder, setManualOrder] = useState({
     customerName: "",
     phone: "",
