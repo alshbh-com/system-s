@@ -127,7 +127,7 @@ const Home = () => {
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <p className="text-center text-sm sm:text-base text-primary-foreground/80 font-medium">
-            أفضل الأزياء العصرية بأسعار مميزة
+            أفضل مستحضرات التجميل بأسعار مميزة
           </p>
         </div>
       </header>
