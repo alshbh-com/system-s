@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Printer, FileSpreadsheet, Filter, Building2, Search } from "lucide-react";
+import { ArrowLeft, Printer, FileSpreadsheet, Filter, Building2, Search, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
@@ -71,7 +73,7 @@ const Invoices = () => {
   
   // فلاتر
   const [dateFilter, setDateFilter] = useState<string>("");
-  const [governorateFilter, setGovernorateFilter] = useState<string>("all");
+  const [governorateFilters, setGovernorateFilters] = useState<string[]>([]);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders-for-invoices"],
@@ -159,15 +161,15 @@ const Invoices = () => {
         if (orderDate !== dateFilter) return false;
       }
       
-      // فلتر المحافظة
-      if (governorateFilter && governorateFilter !== "all") {
+      // فلتر المحافظات (متعدد)
+      if (governorateFilters.length > 0) {
         const orderGov = order.governorates?.name || order.customers?.governorate || "";
-        if (orderGov !== governorateFilter) return false;
+        if (!governorateFilters.includes(orderGov)) return false;
       }
       
       return true;
     });
-  }, [orders, dateFilter, governorateFilter, searchQuery]);
+  }, [orders, dateFilter, governorateFilters, searchQuery]);
 
   // تصدير Excel للأوردرات المفلترة/المحددة فقط
   const handleExportExcel = () => {
@@ -512,20 +514,66 @@ const Invoices = () => {
               </div>
               
               <div className="flex flex-col gap-1">
-                <Label className="text-xs">المحافظة</Label>
-                <Select value={governorateFilter} onValueChange={setGovernorateFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="كل المحافظات" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">كل المحافظات</SelectItem>
-                    {governorates?.map((gov) => (
-                      <SelectItem key={gov.id} value={gov.name}>
-                        {gov.name}
-                      </SelectItem>
+                <Label className="text-xs">المحافظات (متعدد)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-56 justify-between font-normal">
+                      <span className="truncate">
+                        {governorateFilters.length === 0
+                          ? "كل المحافظات"
+                          : `${governorateFilters.length} محافظة`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2 max-h-80 overflow-y-auto" align="start">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setGovernorateFilters(governorates?.map(g => g.name) || [])}
+                      >
+                        تحديد الكل
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setGovernorateFilters([])}
+                      >
+                        مسح
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {governorates?.map((gov) => {
+                        const checked = governorateFilters.includes(gov.name);
+                        return (
+                          <label
+                            key={gov.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                if (c) setGovernorateFilters([...governorateFilters, gov.name]);
+                                else setGovernorateFilters(governorateFilters.filter(n => n !== gov.name));
+                              }}
+                            />
+                            <span>{gov.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {governorateFilters.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1 max-w-56">
+                    {governorateFilters.map((g) => (
+                      <Badge key={g} variant="secondary" className="text-xs cursor-pointer" onClick={() => setGovernorateFilters(governorateFilters.filter(n => n !== g))}>
+                        {g} ×
+                      </Badge>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col gap-1">
@@ -550,7 +598,7 @@ const Invoices = () => {
                 size="sm"
                 onClick={() => {
                   setDateFilter("");
-                  setGovernorateFilter("all");
+                  setGovernorateFilters([]);
                   setSearchQuery("");
                 }}
               >
