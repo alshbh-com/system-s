@@ -218,12 +218,13 @@ const Governorates = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>المحافظة</TableHead>
-                    <TableHead>سعر الشحن (ج.م)</TableHead>
+                    <TableHead>سعر الشحن للعميل (ج.م)</TableHead>
+                    <TableHead>سعر شحن المندوب (ج.م)</TableHead>
                     {canEditGovernorates && <TableHead>إجراءات</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {governorates?.map((gov) => (
+                  {governorates?.map((gov: any) => (
                     <TableRow key={gov.id}>
                       <TableCell className="font-medium">{gov.name}</TableCell>
                       <TableCell>
@@ -245,13 +246,32 @@ const Governorates = () => {
                           <span>{gov.shipping_cost} ج.م</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        {canEditGovernorates ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editingId === gov.id ? (agentShippingCosts[gov.id] ?? gov.agent_shipping_cost ?? 0) : (gov.agent_shipping_cost ?? 0)}
+                          onChange={(e) => {
+                            setEditingId(gov.id);
+                            setAgentShippingCosts({
+                              ...agentShippingCosts,
+                              [gov.id]: Number(e.target.value) || 0
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        ) : (
+                          <span>{gov.agent_shipping_cost ?? 0} ج.م</span>
+                        )}
+                      </TableCell>
                       {canEditGovernorates && (
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {editingId === gov.id && (
                             <Button
                               size="sm"
-                              onClick={() => handleSave(gov.id)}
+                              onClick={() => handleSave(gov.id, gov.shipping_cost, gov.agent_shipping_cost ?? 0)}
                               disabled={updateShippingCostMutation.isPending}
                             >
                               <Save className="ml-2 h-4 w-4" />
