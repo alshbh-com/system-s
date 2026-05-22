@@ -526,12 +526,22 @@ const Cart = () => {
           return sum + (price * item.quantity);
         }, 0);
 
+        // Resolve final shipping cost + governorate id from live data so store orders never lose shipping
+        const matchedGov = governorates?.find(
+          g => (g.name || "").trim() === (customerInfo.governorate || "").trim()
+        );
+        const govShipping = matchedGov ? parseFloat(matchedGov.shipping_cost?.toString() || "0") : 0;
+        const finalShipping = customerInfo.shippingCost > 0
+          ? customerInfo.shippingCost
+          : govShipping;
+
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
             customer_id: customer.id,
+            governorate_id: matchedGov?.id || null,
             total_amount: itemsTotal,
-            shipping_cost: customerInfo.shippingCost,
+            shipping_cost: finalShipping,
             discount: 0,
             order_details: customerInfo.orderDetails || null,
             notes: customerInfo.notes,
