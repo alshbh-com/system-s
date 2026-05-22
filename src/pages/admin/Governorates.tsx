@@ -20,10 +20,11 @@ const Governorates = () => {
   const canEditGovernorates = canEdit('governorates');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [shippingCosts, setShippingCosts] = useState<Record<string, number>>({});
+  const [agentShippingCosts, setAgentShippingCosts] = useState<Record<string, number>>({});
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingGovernorate, setEditingGovernorate] = useState<any>(null);
-  const [newGovernorate, setNewGovernorate] = useState({ name: "", shipping_cost: "" });
+  const [newGovernorate, setNewGovernorate] = useState({ name: "", shipping_cost: "", agent_shipping_cost: "" });
 
   const { data: governorates, isLoading } = useQuery({
     queryKey: ["governorates"],
@@ -39,10 +40,10 @@ const Governorates = () => {
   });
 
   const addGovernorateMutation = useMutation({
-    mutationFn: async ({ name, shippingCost }: { name: string; shippingCost: number }) => {
+    mutationFn: async ({ name, shippingCost, agentShippingCost }: { name: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .insert({ name, shipping_cost: shippingCost });
+        .insert({ name, shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any);
       
       if (error) throw error;
     },
@@ -50,7 +51,7 @@ const Governorates = () => {
       queryClient.invalidateQueries({ queryKey: ["governorates"] });
       toast.success("تم إضافة المحافظة بنجاح");
       setAddDialogOpen(false);
-      setNewGovernorate({ name: "", shipping_cost: "" });
+      setNewGovernorate({ name: "", shipping_cost: "", agent_shipping_cost: "" });
     },
     onError: () => {
       toast.error("حدث خطأ أثناء الإضافة");
@@ -58,10 +59,10 @@ const Governorates = () => {
   });
 
   const updateGovernorateMutation = useMutation({
-    mutationFn: async ({ id, name, shippingCost }: { id: string; name: string; shippingCost: number }) => {
+    mutationFn: async ({ id, name, shippingCost, agentShippingCost }: { id: string; name: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .update({ name, shipping_cost: shippingCost })
+        .update({ name, shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any)
         .eq("id", id);
       
       if (error) throw error;
@@ -96,25 +97,26 @@ const Governorates = () => {
   });
 
   const updateShippingCostMutation = useMutation({
-    mutationFn: async ({ id, shippingCost }: { id: string; shippingCost: number }) => {
+    mutationFn: async ({ id, shippingCost, agentShippingCost }: { id: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .update({ shipping_cost: shippingCost })
+        .update({ shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any)
         .eq("id", id);
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["governorates"] });
-      toast.success("تم تحديث سعر الشحن");
+      toast.success("تم تحديث الأسعار");
       setEditingId(null);
     },
   });
 
-  const handleSave = (id: string) => {
-    const cost = shippingCosts[id];
-    if (cost !== undefined && cost >= 0) {
-      updateShippingCostMutation.mutate({ id, shippingCost: cost });
+  const handleSave = (id: string, currentShipping: number, currentAgent: number) => {
+    const cost = shippingCosts[id] ?? currentShipping;
+    const agentCost = agentShippingCosts[id] ?? currentAgent;
+    if (cost >= 0 && agentCost >= 0) {
+      updateShippingCostMutation.mutate({ id, shippingCost: cost, agentShippingCost: agentCost });
     }
   };
 
@@ -125,7 +127,8 @@ const Governorates = () => {
     }
     addGovernorateMutation.mutate({
       name: newGovernorate.name.trim(),
-      shippingCost: parseFloat(newGovernorate.shipping_cost) || 0
+      shippingCost: parseFloat(newGovernorate.shipping_cost) || 0,
+      agentShippingCost: parseFloat(newGovernorate.agent_shipping_cost) || 0,
     });
   };
 
@@ -137,7 +140,8 @@ const Governorates = () => {
     updateGovernorateMutation.mutate({
       id: editingGovernorate.id,
       name: editingGovernorate.name.trim(),
-      shippingCost: parseFloat(editingGovernorate.shipping_cost) || 0
+      shippingCost: parseFloat(editingGovernorate.shipping_cost) || 0,
+      agentShippingCost: parseFloat(editingGovernorate.agent_shipping_cost) || 0,
     });
   };
 
@@ -188,12 +192,22 @@ const Governorates = () => {
                     />
                   </div>
                   <div>
-                    <Label>سعر الشحن (ج.م)</Label>
+                    <Label>سعر الشحن للعميل (ج.م)</Label>
                     <Input
                       type="number"
                       min="0"
                       value={newGovernorate.shipping_cost}
                       onChange={(e) => setNewGovernorate({ ...newGovernorate, shipping_cost: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>سعر شحن المندوب (ج.م)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={newGovernorate.agent_shipping_cost}
+                      onChange={(e) => setNewGovernorate({ ...newGovernorate, agent_shipping_cost: e.target.value })}
                       placeholder="0"
                     />
                   </div>
@@ -214,12 +228,13 @@ const Governorates = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>المحافظة</TableHead>
-                    <TableHead>سعر الشحن (ج.م)</TableHead>
+                    <TableHead>سعر الشحن للعميل (ج.م)</TableHead>
+                    <TableHead>سعر شحن المندوب (ج.م)</TableHead>
                     {canEditGovernorates && <TableHead>إجراءات</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {governorates?.map((gov) => (
+                  {governorates?.map((gov: any) => (
                     <TableRow key={gov.id}>
                       <TableCell className="font-medium">{gov.name}</TableCell>
                       <TableCell>
@@ -241,13 +256,32 @@ const Governorates = () => {
                           <span>{gov.shipping_cost} ج.م</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        {canEditGovernorates ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          value={editingId === gov.id ? (agentShippingCosts[gov.id] ?? gov.agent_shipping_cost ?? 0) : (gov.agent_shipping_cost ?? 0)}
+                          onChange={(e) => {
+                            setEditingId(gov.id);
+                            setAgentShippingCosts({
+                              ...agentShippingCosts,
+                              [gov.id]: Number(e.target.value) || 0
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        ) : (
+                          <span>{gov.agent_shipping_cost ?? 0} ج.م</span>
+                        )}
+                      </TableCell>
                       {canEditGovernorates && (
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {editingId === gov.id && (
                             <Button
                               size="sm"
-                              onClick={() => handleSave(gov.id)}
+                              onClick={() => handleSave(gov.id, gov.shipping_cost, gov.agent_shipping_cost ?? 0)}
                               disabled={updateShippingCostMutation.isPending}
                             >
                               <Save className="ml-2 h-4 w-4" />
@@ -312,12 +346,22 @@ const Governorates = () => {
                 />
               </div>
               <div>
-                <Label>سعر الشحن (ج.م)</Label>
+                <Label>سعر الشحن للعميل (ج.م)</Label>
                 <Input
                   type="number"
                   min="0"
-                  value={editingGovernorate?.shipping_cost || ""}
+                  value={editingGovernorate?.shipping_cost ?? ""}
                   onChange={(e) => setEditingGovernorate({ ...editingGovernorate, shipping_cost: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>سعر شحن المندوب (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editingGovernorate?.agent_shipping_cost ?? ""}
+                  onChange={(e) => setEditingGovernorate({ ...editingGovernorate, agent_shipping_cost: e.target.value })}
                   placeholder="0"
                 />
               </div>

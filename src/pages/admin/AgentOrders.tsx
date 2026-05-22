@@ -58,7 +58,8 @@ const AgentOrders = () => {
   const [returnData, setReturnData] = useState({
     returned_items: [] as any[],
     notes: "",
-    removeShipping: false
+    removeShipping: false,
+    shipping_deduction: "",
   });
   const [editingShipping, setEditingShipping] = useState<string | null>(null);
   const [newShipping, setNewShipping] = useState<string>("");
@@ -405,8 +406,12 @@ const AgentOrders = () => {
     const totalReturns = Math.abs(totalReturnsSigned);
     const totalModifications = Math.abs(totalModificationsSigned);
 
+    // لو اليوم مقفل، المرتجعات تظهر بس لا تؤثر على الصافي (اتسوّت وقت التقفيل)
+    const dayClosed = dateFilter ? isDayClosed(dateFilter) : false;
+    const returnsImpactOnNet = dayClosed ? 0 : totalReturnsSigned;
+
     // صافي المطلوب (حركة اليوم) = المطلوب + التعديلات + المرتجعات(سالبة)
-    const netRequired = totalOwed + totalModificationsSigned + totalReturnsSigned;
+    const netRequired = totalOwed + totalModificationsSigned + returnsImpactOnNet;
 
     // الصافي على المندوب = صافي المطلوب - المسلم - الدفعات المقدمة
     const agentReceivables = netRequired - totalDelivered - totalPaid;
@@ -1198,9 +1203,10 @@ const AgentOrders = () => {
             customer_id: data.customer_id,
             delivery_agent_id: data.delivery_agent_id,
             return_amount: data.return_amount,
+            shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
-          })
+          } as any)
           .eq("id", existingReturn.id);
         if (error) throw error;
       } else {
@@ -1211,9 +1217,10 @@ const AgentOrders = () => {
             customer_id: data.customer_id,
             delivery_agent_id: data.delivery_agent_id,
             return_amount: data.return_amount,
+            shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
-          });
+          } as any);
         if (error) throw error;
       }
     },
@@ -1225,7 +1232,7 @@ const AgentOrders = () => {
       toast.success("تم تسجيل المرتجع بنجاح");
       setReturnDialogOpen(false);
       setSelectedOrderForReturn(null);
-      setReturnData({ returned_items: [], notes: "", removeShipping: false });
+      setReturnData({ returned_items: [], notes: "", removeShipping: false, shipping_deduction: "" });
     },
   });
 
@@ -1238,7 +1245,14 @@ const AgentOrders = () => {
       returned_quantity: 0,
       price: parseFloat(item.price.toString())
     }));
-    setReturnData({ returned_items: items, notes: "", removeShipping: false });
+    // Prefill shipping deduction with agent_shipping_cost (typical use case)
+    const defaultShippingDeduction = parseFloat(order.agent_shipping_cost?.toString() || "0");
+    setReturnData({
+      returned_items: items,
+      notes: "",
+      removeShipping: false,
+      shipping_deduction: defaultShippingDeduction > 0 ? defaultShippingDeduction.toString() : "",
+    });
     setReturnDialogOpen(true);
   };
 
@@ -1479,13 +1493,15 @@ const AgentOrders = () => {
       sum + (item.price * item.returned_quantity), 0
     );
 
+    const shippingDeduction = parseFloat(returnData.shipping_deduction) || 0;
+
     const allReturned = returnData.returned_items.every(item => 
       item.returned_quantity === item.total_quantity
     );
 
     // تحديد الحالة
     let newStatus = allReturned ? "returned" : "partially_returned";
-    if (returnData.removeShipping) {
+    if (returnData.removeShipping || shippingDeduction > 0) {
       newStatus = "return_no_shipping";
     }
 
@@ -1493,7 +1509,7 @@ const AgentOrders = () => {
     await updateStatusMutation.mutateAsync({
       id: selectedOrderForReturn.id,
       status: newStatus,
-      removeShipping: returnData.removeShipping,
+      removeShipping: returnData.removeShipping || shippingDeduction > 0,
       skipAutoReturnUpsert: true,
     });
 
@@ -1503,6 +1519,7 @@ const AgentOrders = () => {
       customer_id: selectedOrderForReturn.customer_id,
       delivery_agent_id: selectedOrderForReturn.delivery_agent_id,
       return_amount: returnAmount,
+      shipping_deduction: shippingDeduction,
       returned_items: returnedItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
@@ -2947,30 +2964,37 @@ const AgentOrders = () => {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id="remove-shipping"
-                    checked={returnData.removeShipping}
-                    onCheckedChange={(checked) => 
-                      setReturnData({ ...returnData, removeShipping: checked as boolean })
-                    }
+                <div>
+                  <Label htmlFor="shipping-deduction">خصم الشحن (ج.م)</Label>
+                  <Input
+                    id="shipping-deduction"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={returnData.shipping_deduction}
+                    onChange={(e) => setReturnData({ ...returnData, shipping_deduction: e.target.value })}
+                    placeholder="0"
                   />
-                  <Label htmlFor="remove-shipping" className="cursor-pointer">
-                    مرتجع دون شحن (خصم الشحن من المستحقات)
-                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المبلغ الذي سيتم خصمه كشحن من قيمة المرتجع (اتركها 0 لو مفيش خصم شحن)
+                  </p>
                 </div>
 
-                <div className="p-4 bg-accent rounded-lg">
-                  <p className="font-bold text-lg text-destructive">
-                    قيمة المرتجع: {returnData.returned_items
-                      .reduce((sum, item) => sum + (item.price * item.returned_quantity), 0)
-                      .toFixed(2)} ج.م
-                  </p>
-                  {returnData.removeShipping && selectedOrderForReturn && (
-                    <p className="font-bold text-sm text-orange-600 mt-2">
-                      سيتم خصم الشحن: {parseFloat(selectedOrderForReturn.shipping_cost?.toString() || "0").toFixed(2)} ج.م
-                    </p>
-                  )}
+                <div className="p-4 bg-accent rounded-lg space-y-1">
+                  {(() => {
+                    const value = returnData.returned_items.reduce((sum, item) => sum + (item.price * item.returned_quantity), 0);
+                    const ship = parseFloat(returnData.shipping_deduction) || 0;
+                    const net = value - ship;
+                    return (
+                      <>
+                        <p className="text-sm">قيمة المنتجات المرتجعة: <span className="font-bold">{value.toFixed(2)} ج.م</span></p>
+                        <p className="text-sm text-orange-600">خصم الشحن: <span className="font-bold">{ship.toFixed(2)} ج.م</span></p>
+                        <p className="font-bold text-lg text-destructive border-t pt-2">
+                          صافي المرتجع: {net.toFixed(2)} ج.م
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <Button onClick={handleSubmitReturn} className="w-full">
