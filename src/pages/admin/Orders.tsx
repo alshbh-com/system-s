@@ -442,7 +442,8 @@ const Orders = () => {
             .from("customers")
             .select("id")
             .eq("phone", manualOrder.phone)
-            .single();
+            .maybeSingle();
+          
           
           if (existingCustomer) {
             customerId = existingCustomer.id;
