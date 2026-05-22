@@ -152,13 +152,26 @@ const Orders = () => {
           }
 
           const safePrice = isNaN(productPrice) ? 0 : productPrice;
-          // Prefer explicit total column; otherwise compute price × qty
-          const totalProductPrice = !isNaN(totalInput) && totalInput > 0
-            ? totalInput
-            : safePrice * quantity;
           const shippingCost = !isNaN(shippingInput) && shippingInput > 0
             ? shippingInput
             : parseFloat(selectedGov?.shipping_cost?.toString() || "0");
+          // total_amount must store ITEMS ONLY (without shipping) to avoid
+          // double-counting shipping when displays add shipping_cost on top.
+          // If user provided an explicit total column, assume it's the grand
+          // total (items + shipping) — subtract shipping to get items-only.
+          let totalProductPrice: number;
+          if (!isNaN(totalInput) && totalInput > 0) {
+            const itemsCalc = safePrice * quantity;
+            if (shippingCost > 0 && totalInput > shippingCost && Math.abs(totalInput - (itemsCalc + shippingCost)) < Math.abs(totalInput - itemsCalc)) {
+              totalProductPrice = totalInput - shippingCost;
+            } else if (shippingCost > 0 && totalInput > shippingCost && itemsCalc === 0) {
+              totalProductPrice = totalInput - shippingCost;
+            } else {
+              totalProductPrice = totalInput;
+            }
+          } else {
+            totalProductPrice = safePrice * quantity;
+          }
 
           const productDetails = productName ? [{
             name: productName, quantity, price: safePrice,
