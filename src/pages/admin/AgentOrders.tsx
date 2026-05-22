@@ -58,7 +58,8 @@ const AgentOrders = () => {
   const [returnData, setReturnData] = useState({
     returned_items: [] as any[],
     notes: "",
-    removeShipping: false
+    removeShipping: false,
+    shipping_deduction: "",
   });
   const [editingShipping, setEditingShipping] = useState<string | null>(null);
   const [newShipping, setNewShipping] = useState<string>("");
