@@ -140,7 +140,8 @@ const Governorates = () => {
     updateGovernorateMutation.mutate({
       id: editingGovernorate.id,
       name: editingGovernorate.name.trim(),
-      shippingCost: parseFloat(editingGovernorate.shipping_cost) || 0
+      shippingCost: parseFloat(editingGovernorate.shipping_cost) || 0,
+      agentShippingCost: parseFloat(editingGovernorate.agent_shipping_cost) || 0,
     });
   };
 
