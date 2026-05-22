@@ -1239,7 +1239,14 @@ const AgentOrders = () => {
       returned_quantity: 0,
       price: parseFloat(item.price.toString())
     }));
-    setReturnData({ returned_items: items, notes: "", removeShipping: false });
+    // Prefill shipping deduction with agent_shipping_cost (typical use case)
+    const defaultShippingDeduction = parseFloat(order.agent_shipping_cost?.toString() || "0");
+    setReturnData({
+      returned_items: items,
+      notes: "",
+      removeShipping: false,
+      shipping_deduction: defaultShippingDeduction > 0 ? defaultShippingDeduction.toString() : "",
+    });
     setReturnDialogOpen(true);
   };
 
