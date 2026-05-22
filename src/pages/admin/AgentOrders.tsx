@@ -1487,13 +1487,15 @@ const AgentOrders = () => {
       sum + (item.price * item.returned_quantity), 0
     );
 
+    const shippingDeduction = parseFloat(returnData.shipping_deduction) || 0;
+
     const allReturned = returnData.returned_items.every(item => 
       item.returned_quantity === item.total_quantity
     );
 
     // تحديد الحالة
     let newStatus = allReturned ? "returned" : "partially_returned";
-    if (returnData.removeShipping) {
+    if (returnData.removeShipping || shippingDeduction > 0) {
       newStatus = "return_no_shipping";
     }
 
@@ -1501,7 +1503,7 @@ const AgentOrders = () => {
     await updateStatusMutation.mutateAsync({
       id: selectedOrderForReturn.id,
       status: newStatus,
-      removeShipping: returnData.removeShipping,
+      removeShipping: returnData.removeShipping || shippingDeduction > 0,
       skipAutoReturnUpsert: true,
     });
 
@@ -1511,6 +1513,7 @@ const AgentOrders = () => {
       customer_id: selectedOrderForReturn.customer_id,
       delivery_agent_id: selectedOrderForReturn.delivery_agent_id,
       return_amount: returnAmount,
+      shipping_deduction: shippingDeduction,
       returned_items: returnedItems.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
