@@ -20,10 +20,11 @@ const Governorates = () => {
   const canEditGovernorates = canEdit('governorates');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [shippingCosts, setShippingCosts] = useState<Record<string, number>>({});
+  const [agentShippingCosts, setAgentShippingCosts] = useState<Record<string, number>>({});
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingGovernorate, setEditingGovernorate] = useState<any>(null);
-  const [newGovernorate, setNewGovernorate] = useState({ name: "", shipping_cost: "" });
+  const [newGovernorate, setNewGovernorate] = useState({ name: "", shipping_cost: "", agent_shipping_cost: "" });
 
   const { data: governorates, isLoading } = useQuery({
     queryKey: ["governorates"],
