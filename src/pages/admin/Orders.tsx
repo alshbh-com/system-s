@@ -49,20 +49,58 @@ const Orders = () => {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      if (!rows.length) {
+      const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      if (!rawRows.length) {
         toast.error("الملف فارغ");
         setExcelImporting(false);
         if (excelInputRef.current) excelInputRef.current.value = "";
         return;
       }
 
+      // Normalize keys: trim, collapse whitespace, normalize Arabic alef/yeh, lowercase ascii
+      const normalizeKey = (k: string) =>
+        k.toString()
+          .replace(/\u0640/g, "") // tatweel
+          .replace(/[إأآا]/g, "ا")
+          .replace(/ى/g, "ي")
+          .replace(/ة/g, "ه")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+
+      const rows = rawRows.map(r => {
+        const out: Record<string, unknown> = {};
+        for (const k of Object.keys(r)) out[normalizeKey(k)] = r[k];
+        return out;
+      });
+
+      // Convert Arabic digits → ASCII, strip currency words/commas
+      const toNumber = (v: unknown): number => {
+        if (v === null || v === undefined) return NaN;
+        if (typeof v === "number") return v;
+        let s = String(v).trim();
+        if (!s) return NaN;
+        s = s.replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+        s = s.replace(/[,،]/g, "").replace(/[^\d.\-]/g, "");
+        const n = parseFloat(s);
+        return isNaN(n) ? NaN : n;
+      };
+
       const pick = (row: Record<string, unknown>, keys: string[]) => {
         for (const k of keys) {
-          const v = row[k];
+          const v = row[normalizeKey(k)];
           if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
         }
         return "";
+      };
+      const pickNum = (row: Record<string, unknown>, keys: string[]): number => {
+        for (const k of keys) {
+          const v = row[normalizeKey(k)];
+          if (v === undefined || v === null || String(v).trim() === "") continue;
+          const n = toNumber(v);
+          if (!isNaN(n)) return n;
+        }
+        return NaN;
       };
 
       let success = 0;
@@ -70,21 +108,23 @@ const Orders = () => {
 
       for (const row of rows) {
         try {
-          const customerName = pick(row, ["اسم العميل", "العميل", "الاسم", "name", "customer_name"]) || "عميل غير محدد";
-          const phone = pick(row, ["الهاتف", "رقم الهاتف", "تليفون", "phone"]) || "";
-          const address = pick(row, ["العنوان", "address"]) || "غير محدد";
-          const govName = pick(row, ["المحافظة", "governorate"]);
-          const productName = pick(row, ["اسم المنتج", "المنتج", "product", "product_name"]);
-          const productPrice = parseFloat(pick(row, ["السعر", "سعر المنتج", "price"])) || 0;
-          const quantity = parseInt(pick(row, ["الكمية", "qty", "quantity"])) || 1;
-          const productSize = pick(row, ["المقاس", "size"]);
-          const productColor = pick(row, ["اللون", "color"]);
-          const shippingInput = parseFloat(pick(row, ["الشحن", "شحن", "shipping", "shipping_cost"]));
+          const customerName = pick(row, ["اسم العميل", "العميل", "الاسم", "اسم", "name", "customer_name", "customer"]) || "عميل غير محدد";
+          const phone = pick(row, ["الهاتف", "رقم الهاتف", "تليفون", "موبايل", "phone", "mobile"]) || "";
+          const address = pick(row, ["العنوان", "العنوان بالتفصيل", "address"]) || "غير محدد";
+          const govName = pick(row, ["المحافظة", "محافظه", "governorate", "city"]);
+          const productName = pick(row, ["اسم المنتج", "المنتج", "اسم الصنف", "الصنف", "product", "product_name", "item"]);
+          const productPrice = pickNum(row, ["السعر", "سعر المنتج", "سعر القطعه", "سعر الوحده", "سعر", "price", "unit_price"]);
+          let quantity = parseInt(String(pickNum(row, ["الكمية", "العدد", "كميه", "qty", "quantity", "count"])), 10);
+          if (!quantity || quantity < 1) quantity = 1;
+          const productSize = pick(row, ["المقاس", "مقاس", "size"]);
+          const productColor = pick(row, ["اللون", "لون", "color", "colour"]);
+          const shippingInput = pickNum(row, ["الشحن", "شحن", "سعر الشحن", "shipping", "shipping_cost"]);
+          const totalInput = pickNum(row, ["الاجمالي", "الإجمالي", "اجمالي المنتجات", "اجمالي", "المجموع", "total", "total_amount", "amount"]);
 
           if (!phone) { failed++; continue; }
 
           const selectedGov = govName
-            ? governorates?.find(g => g.name?.trim() === govName.trim())
+            ? governorates?.find(g => normalizeKey(g.name || "") === normalizeKey(govName))
             : undefined;
 
           // Find or create customer by phone
@@ -111,13 +151,17 @@ const Orders = () => {
             customerId = customer.id;
           }
 
-          const totalProductPrice = productPrice * quantity;
+          const safePrice = isNaN(productPrice) ? 0 : productPrice;
+          // Prefer explicit total column; otherwise compute price × qty
+          const totalProductPrice = !isNaN(totalInput) && totalInput > 0
+            ? totalInput
+            : safePrice * quantity;
           const shippingCost = !isNaN(shippingInput) && shippingInput > 0
             ? shippingInput
-            : (selectedGov?.shipping_cost || 0);
+            : parseFloat(selectedGov?.shipping_cost?.toString() || "0");
 
           const productDetails = productName ? [{
-            name: productName, quantity, price: productPrice,
+            name: productName, quantity, price: safePrice,
             size: productSize || null, color: productColor || null
           }] : null;
 
