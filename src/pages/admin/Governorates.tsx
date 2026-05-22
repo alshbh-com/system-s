@@ -40,10 +40,10 @@ const Governorates = () => {
   });
 
   const addGovernorateMutation = useMutation({
-    mutationFn: async ({ name, shippingCost }: { name: string; shippingCost: number }) => {
+    mutationFn: async ({ name, shippingCost, agentShippingCost }: { name: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .insert({ name, shipping_cost: shippingCost });
+        .insert({ name, shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any);
       
       if (error) throw error;
     },
@@ -51,7 +51,7 @@ const Governorates = () => {
       queryClient.invalidateQueries({ queryKey: ["governorates"] });
       toast.success("تم إضافة المحافظة بنجاح");
       setAddDialogOpen(false);
-      setNewGovernorate({ name: "", shipping_cost: "" });
+      setNewGovernorate({ name: "", shipping_cost: "", agent_shipping_cost: "" });
     },
     onError: () => {
       toast.error("حدث خطأ أثناء الإضافة");
@@ -59,10 +59,10 @@ const Governorates = () => {
   });
 
   const updateGovernorateMutation = useMutation({
-    mutationFn: async ({ id, name, shippingCost }: { id: string; name: string; shippingCost: number }) => {
+    mutationFn: async ({ id, name, shippingCost, agentShippingCost }: { id: string; name: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .update({ name, shipping_cost: shippingCost })
+        .update({ name, shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any)
         .eq("id", id);
       
       if (error) throw error;
@@ -97,25 +97,26 @@ const Governorates = () => {
   });
 
   const updateShippingCostMutation = useMutation({
-    mutationFn: async ({ id, shippingCost }: { id: string; shippingCost: number }) => {
+    mutationFn: async ({ id, shippingCost, agentShippingCost }: { id: string; shippingCost: number; agentShippingCost: number }) => {
       const { error } = await supabase
         .from("governorates")
-        .update({ shipping_cost: shippingCost })
+        .update({ shipping_cost: shippingCost, agent_shipping_cost: agentShippingCost } as any)
         .eq("id", id);
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["governorates"] });
-      toast.success("تم تحديث سعر الشحن");
+      toast.success("تم تحديث الأسعار");
       setEditingId(null);
     },
   });
 
-  const handleSave = (id: string) => {
-    const cost = shippingCosts[id];
-    if (cost !== undefined && cost >= 0) {
-      updateShippingCostMutation.mutate({ id, shippingCost: cost });
+  const handleSave = (id: string, currentShipping: number, currentAgent: number) => {
+    const cost = shippingCosts[id] ?? currentShipping;
+    const agentCost = agentShippingCosts[id] ?? currentAgent;
+    if (cost >= 0 && agentCost >= 0) {
+      updateShippingCostMutation.mutate({ id, shippingCost: cost, agentShippingCost: agentCost });
     }
   };
 
@@ -126,7 +127,8 @@ const Governorates = () => {
     }
     addGovernorateMutation.mutate({
       name: newGovernorate.name.trim(),
-      shippingCost: parseFloat(newGovernorate.shipping_cost) || 0
+      shippingCost: parseFloat(newGovernorate.shipping_cost) || 0,
+      agentShippingCost: parseFloat(newGovernorate.agent_shipping_cost) || 0,
     });
   };
 
