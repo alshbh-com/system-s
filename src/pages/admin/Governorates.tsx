@@ -192,12 +192,22 @@ const Governorates = () => {
                     />
                   </div>
                   <div>
-                    <Label>سعر الشحن (ج.م)</Label>
+                    <Label>سعر الشحن للعميل (ج.م)</Label>
                     <Input
                       type="number"
                       min="0"
                       value={newGovernorate.shipping_cost}
                       onChange={(e) => setNewGovernorate({ ...newGovernorate, shipping_cost: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>سعر شحن المندوب (ج.م)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={newGovernorate.agent_shipping_cost}
+                      onChange={(e) => setNewGovernorate({ ...newGovernorate, agent_shipping_cost: e.target.value })}
                       placeholder="0"
                     />
                   </div>
