@@ -346,12 +346,22 @@ const Governorates = () => {
                 />
               </div>
               <div>
-                <Label>سعر الشحن (ج.م)</Label>
+                <Label>سعر الشحن للعميل (ج.م)</Label>
                 <Input
                   type="number"
                   min="0"
-                  value={editingGovernorate?.shipping_cost || ""}
+                  value={editingGovernorate?.shipping_cost ?? ""}
                   onChange={(e) => setEditingGovernorate({ ...editingGovernorate, shipping_cost: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label>سعر شحن المندوب (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={editingGovernorate?.agent_shipping_cost ?? ""}
+                  onChange={(e) => setEditingGovernorate({ ...editingGovernorate, agent_shipping_cost: e.target.value })}
                   placeholder="0"
                 />
               </div>
