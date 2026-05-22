@@ -181,11 +181,11 @@ const Orders = () => {
             await supabase.from("order_items").insert({
               order_id: order.id,
               quantity,
-              price: productPrice,
+              price: safePrice,
               size: productSize || null,
               color: productColor || null,
               product_details: JSON.stringify({
-                name: productName, price: productPrice,
+                name: productName, price: safePrice,
                 size: productSize || null, color: productColor || null
               })
             });
