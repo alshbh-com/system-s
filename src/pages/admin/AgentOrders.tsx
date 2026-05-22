@@ -1226,7 +1226,7 @@ const AgentOrders = () => {
       toast.success("تم تسجيل المرتجع بنجاح");
       setReturnDialogOpen(false);
       setSelectedOrderForReturn(null);
-      setReturnData({ returned_items: [], notes: "", removeShipping: false });
+      setReturnData({ returned_items: [], notes: "", removeShipping: false, shipping_deduction: "" });
     },
   });
 
