@@ -406,8 +406,12 @@ const AgentOrders = () => {
     const totalReturns = Math.abs(totalReturnsSigned);
     const totalModifications = Math.abs(totalModificationsSigned);
 
+    // لو اليوم مقفل، المرتجعات تظهر بس لا تؤثر على الصافي (اتسوّت وقت التقفيل)
+    const dayClosed = dateFilter ? isDayClosed(dateFilter) : false;
+    const returnsImpactOnNet = dayClosed ? 0 : totalReturnsSigned;
+
     // صافي المطلوب (حركة اليوم) = المطلوب + التعديلات + المرتجعات(سالبة)
-    const netRequired = totalOwed + totalModificationsSigned + totalReturnsSigned;
+    const netRequired = totalOwed + totalModificationsSigned + returnsImpactOnNet;
 
     // الصافي على المندوب = صافي المطلوب - المسلم - الدفعات المقدمة
     const agentReceivables = netRequired - totalDelivered - totalPaid;
