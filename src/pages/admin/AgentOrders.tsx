@@ -1199,9 +1199,10 @@ const AgentOrders = () => {
             customer_id: data.customer_id,
             delivery_agent_id: data.delivery_agent_id,
             return_amount: data.return_amount,
+            shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
-          })
+          } as any)
           .eq("id", existingReturn.id);
         if (error) throw error;
       } else {
@@ -1212,9 +1213,10 @@ const AgentOrders = () => {
             customer_id: data.customer_id,
             delivery_agent_id: data.delivery_agent_id,
             return_amount: data.return_amount,
+            shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
-          });
+          } as any);
         if (error) throw error;
       }
     },
