@@ -563,6 +563,8 @@ const AgentOrders = () => {
       deliveredNet,
       deliveredAgentShipping,
       returnedTotal,
+      returnedShippingDeduction,
+      returnedNet,
       productQuantitiesArray,
       totalProductQuantity,
       returnedProductQuantitiesArray,
