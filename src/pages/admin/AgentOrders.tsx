@@ -259,7 +259,7 @@ const AgentOrders = () => {
 
       const { data, error } = await supabase
         .from("returns")
-        .select("id, order_id, return_amount, returned_items, created_at, orders(assigned_at)")
+        .select("id, order_id, return_amount, shipping_deduction, returned_items, created_at, orders(assigned_at)")
         .eq("delivery_agent_id", selectedAgentId)
         .order("created_at", { ascending: false });
 
@@ -482,6 +482,11 @@ const AgentOrders = () => {
       const amt = parseFloat((r?.return_amount ?? 0).toString());
       return sum + (Number.isFinite(amt) ? amt : 0);
     }, 0);
+    const returnedShippingDeduction = returnsToUse.reduce((sum: number, r: any) => {
+      const amt = parseFloat((r?.shipping_deduction ?? 0).toString());
+      return sum + (Number.isFinite(amt) ? amt : 0);
+    }, 0);
+    const returnedNet = returnedTotal - returnedShippingDeduction;
 
     // حساب عدد القطع لكل منتج (من جميع أوردرات اليوم)
     const productQuantities: Record<string, number> = {};
@@ -558,6 +563,8 @@ const AgentOrders = () => {
       deliveredNet,
       deliveredAgentShipping,
       returnedTotal,
+      returnedShippingDeduction,
+      returnedNet,
       productQuantitiesArray,
       totalProductQuantity,
       returnedProductQuantitiesArray,
@@ -2746,6 +2753,12 @@ const AgentOrders = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         بقيمة: {summaryData.returnedTotal.toFixed(2)} ج.م
                       </p>
+                      <p className="text-xs text-green-600 mt-1 font-semibold">
+                        السعر بدون شحن: {summaryData.returnedNet.toFixed(2)} ج.م
+                        {summaryData.returnedShippingDeduction > 0 && (
+                          <span className="text-muted-foreground font-normal"> (خصم شحن {summaryData.returnedShippingDeduction.toFixed(2)})</span>
+                        )}
+                      </p>
                       <p className="text-xs text-orange-500 mt-1">
                         ({summaryData.totalReturnedItems} قطعة مرتجعة)
                       </p>
@@ -2833,7 +2846,7 @@ const AgentOrders = () => {
                       </div>
                       <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
                         <p className="text-sm text-orange-700 dark:text-orange-300">
-                          إجمالي قيمة المرتجعات: <span className="font-bold">{summaryData.returnedTotal.toFixed(2)} ج.م</span>
+                          إجمالي قيمة المرتجعات: <span className="font-bold">{summaryData.returnedTotal.toFixed(2)} ج.م</span> · السعر بدون شحن: <span className="font-bold text-green-700">{summaryData.returnedNet.toFixed(2)} ج.م</span>
                         </p>
                       </div>
                     </div>
