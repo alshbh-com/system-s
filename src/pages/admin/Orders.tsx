@@ -152,9 +152,10 @@ const Orders = () => {
           }
 
           const safePrice = isNaN(productPrice) ? 0 : productPrice;
-          // الشحن يتقرأ من عمود "الشحن" في الشيت فقط — مفيش fallback تلقائي للمحافظة
-          // علشان منحسبش الشحن مرتين (لو السعر/الإجمالي في الشيت أصلاً شامل الشحن)
-          const shippingCost = !isNaN(shippingInput) && shippingInput > 0 ? shippingInput : 0;
+          // الشحن: لو موجود في الشيت ناخده، وإلا fallback لشحن المحافظة (زي الإضافة اليدوية)
+          const shippingCost = !isNaN(shippingInput) && shippingInput > 0
+            ? shippingInput
+            : (selectedGov?.shipping_cost ? parseFloat(selectedGov.shipping_cost.toString()) : 0);
           // total_amount must store ITEMS ONLY (without shipping) to avoid
           // double-counting shipping when displays add shipping_cost on top.
           // If user provided an explicit total column, assume it's the grand
