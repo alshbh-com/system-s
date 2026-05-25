@@ -2753,6 +2753,12 @@ const AgentOrders = () => {
                       <p className="text-xs text-muted-foreground mt-1">
                         بقيمة: {summaryData.returnedTotal.toFixed(2)} ج.م
                       </p>
+                      <p className="text-xs text-green-600 mt-1 font-semibold">
+                        السعر بدون شحن: {summaryData.returnedNet.toFixed(2)} ج.م
+                        {summaryData.returnedShippingDeduction > 0 && (
+                          <span className="text-muted-foreground font-normal"> (خصم شحن {summaryData.returnedShippingDeduction.toFixed(2)})</span>
+                        )}
+                      </p>
                       <p className="text-xs text-orange-500 mt-1">
                         ({summaryData.totalReturnedItems} قطعة مرتجعة)
                       </p>
