@@ -259,7 +259,7 @@ const AgentOrders = () => {
 
       const { data, error } = await supabase
         .from("returns")
-        .select("id, order_id, return_amount, returned_items, created_at, orders(assigned_at)")
+        .select("id, order_id, return_amount, shipping_deduction, returned_items, created_at, orders(assigned_at)")
         .eq("delivery_agent_id", selectedAgentId)
         .order("created_at", { ascending: false });
 
