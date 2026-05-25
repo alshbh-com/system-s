@@ -2846,7 +2846,7 @@ const AgentOrders = () => {
                       </div>
                       <div className="mt-3 pt-3 border-t border-orange-200 dark:border-orange-700">
                         <p className="text-sm text-orange-700 dark:text-orange-300">
-                          إجمالي قيمة المرتجعات: <span className="font-bold">{summaryData.returnedTotal.toFixed(2)} ج.م</span>
+                          إجمالي قيمة المرتجعات: <span className="font-bold">{summaryData.returnedTotal.toFixed(2)} ج.م</span> · السعر بدون شحن: <span className="font-bold text-green-700">{summaryData.returnedNet.toFixed(2)} ج.م</span>
                         </p>
                       </div>
                     </div>
