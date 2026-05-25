@@ -482,6 +482,11 @@ const AgentOrders = () => {
       const amt = parseFloat((r?.return_amount ?? 0).toString());
       return sum + (Number.isFinite(amt) ? amt : 0);
     }, 0);
+    const returnedShippingDeduction = returnsToUse.reduce((sum: number, r: any) => {
+      const amt = parseFloat((r?.shipping_deduction ?? 0).toString());
+      return sum + (Number.isFinite(amt) ? amt : 0);
+    }, 0);
+    const returnedNet = returnedTotal - returnedShippingDeduction;
 
     // حساب عدد القطع لكل منتج (من جميع أوردرات اليوم)
     const productQuantities: Record<string, number> = {};
