@@ -828,7 +828,7 @@ const Orders = () => {
 
             <!-- Footer note -->
             <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#6b7280; padding-top:6px; border-top:1px dotted #cbd5e1;">
-              <div>برجاء مراجعة الطرد قبل الاستلام · لا يُسترجع المنتج بعد الفتح إلا في حالة العيب الصناعي.</div>
+              <div>معاينة الطرد قبل الاستلام وعدم استخدامه · في حالة الرفض يتم دفع رسوم شحن للمندوب 65 ج</div>
               <div style="color:#0b1f33; font-weight:700;">شكراً لاختياركم الصقر اكسبريس</div>
             </div>
           </div>
