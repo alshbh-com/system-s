@@ -17,6 +17,7 @@ import RescheduleOrderDialog from "@/components/admin/RescheduleOrderDialog";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useDailyCashbox, getDailyCashboxName } from "@/hooks/useDailyCashbox";
@@ -1294,12 +1295,22 @@ const AgentOrders = () => {
       const totalPrice = totalAmount + customerShipping;
       const netAmount = totalPrice - agentShipping;
 
+      const formattedItems = formatOrderItems(order.order_items || []);
+      const productsText = formattedItems.map(g => {
+        const sizes = formatSizesDisplay(g.sizes);
+        const parts = [g.name];
+        if (g.color) parts.push(g.color);
+        if (sizes) parts.push(sizes);
+        return `${parts.join(' - ')} (${g.totalQuantity})`;
+      }).join(' | ') || '-';
+
       return {
         "رقم الأوردر": order.order_number || order.id.slice(0, 8),
         "الاسم": order.customers?.name,
         "الهاتف": order.customers?.phone,
         "العنوان": order.customers?.address,
         "المحافظة": order.customers?.governorate || "-",
+        "المنتج": productsText,
         "الإجمالي": totalPrice.toFixed(2),
         "شحن المندوب": agentShipping.toFixed(2),
         "الصافي": netAmount.toFixed(2),
@@ -1317,6 +1328,7 @@ const AgentOrders = () => {
       { wch: 15 }, // الهاتف
       { wch: 35 }, // العنوان
       { wch: 15 }, // المحافظة
+      { wch: 40 }, // المنتج
       { wch: 12 }, // الإجمالي
       { wch: 12 }, // شحن المندوب
       { wch: 12 }, // الصافي
