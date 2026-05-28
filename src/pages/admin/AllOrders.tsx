@@ -684,57 +684,57 @@ const AllOrders = () => {
                           </TableCell>
                           {canEditAllOrders ? (
                           <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  تعديل الحالة
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>تعديل حالة الأوردر</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    اختر الحالة الجديدة للأوردر #{order.order_number || order.id.slice(0, 8)}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <div className="py-4">
-                                  <Select
-                                    value={editingStatus?.orderId === order.id ? editingStatus.currentStatus : order.status}
-                                    onValueChange={(value) => setEditingStatus({ orderId: order.id, currentStatus: value })}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="pending">قيد الانتظار</SelectItem>
-                                      <SelectItem value="processing">قيد التنفيذ</SelectItem>
-                                      <SelectItem value="shipped">تم الشحن</SelectItem>
-                                      <SelectItem value="delivered">تم التوصيل</SelectItem>
-                                      <SelectItem value="delivered_with_modification">تم التوصيل مع التعديل</SelectItem>
-                                      <SelectItem value="cancelled">ملغي</SelectItem>
-                                      <SelectItem value="returned">مرتجع</SelectItem>
-                                      <SelectItem value="return_no_shipping">مرتجع دون شحن</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setEditingStatus(null)}>إلغاء</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => {
-                                    if (editingStatus) {
-                                      updateStatusMutation.mutate({
-                                        orderId: order.id,
-                                        newStatus: editingStatus.currentStatus
-                                      });
-                                    }
-                                  }}>
-                                    حفظ
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="outline">
+                                    تعديل الحالة
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>تعديل حالة الأوردر</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      اختر الحالة الجديدة للأوردر #{order.order_number || order.id.slice(0, 8)}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <div className="py-4">
+                                    <Select
+                                      value={editingStatus?.orderId === order.id ? editingStatus.currentStatus : order.status}
+                                      onValueChange={(value) => setEditingStatus({ orderId: order.id, currentStatus: value })}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pending">قيد الانتظار</SelectItem>
+                                        <SelectItem value="processing">قيد التنفيذ</SelectItem>
+                                        <SelectItem value="shipped">تم الشحن</SelectItem>
+                                        <SelectItem value="delivered">تم التوصيل</SelectItem>
+                                        <SelectItem value="delivered_with_modification">تم التوصيل مع التعديل</SelectItem>
+                                        <SelectItem value="cancelled">ملغي</SelectItem>
+                                        <SelectItem value="returned">مرتجع</SelectItem>
+                                        <SelectItem value="return_no_shipping">مرتجع دون شحن</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setEditingStatus(null)}>إلغاء</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => {
+                                      if (editingStatus) {
+                                        updateStatusMutation.mutate({
+                                          orderId: order.id,
+                                          newStatus: editingStatus.currentStatus
+                                        });
+                                      }
+                                    }}>
+                                      حفظ
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              <RescheduleOrderDialog order={order} />
+                            </div>
                           </TableCell>
                           ) : (
                           <TableCell>
