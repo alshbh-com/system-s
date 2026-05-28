@@ -1045,6 +1045,24 @@ const AgentOrders = () => {
       
       if (orderError) throw orderError;
 
+      // Sync shipping_deduction on any existing return record for this order
+      // so returns/closing always reflect the latest agent shipping cost
+      const { data: existingReturn } = await supabase
+        .from("returns")
+        .select("id, shipping_deduction")
+        .eq("order_id", orderId)
+        .maybeSingle();
+      if (existingReturn?.id) {
+        const currentDeduction = parseFloat((existingReturn.shipping_deduction ?? 0).toString());
+        // Auto-sync only when the deduction wasn't manually overridden
+        if (currentDeduction === oldShipping || currentDeduction === 0) {
+          await supabase
+            .from("returns")
+            .update({ shipping_deduction: newShipping })
+            .eq("id", existingReturn.id);
+        }
+      }
+
       // Calculate the difference (negative because agent_shipping reduces what agent owes)
       const difference = -(newShipping - oldShipping);
 
@@ -1091,6 +1109,8 @@ const AgentOrders = () => {
       queryClient.invalidateQueries({ queryKey: ["agent-orders"] });
       queryClient.invalidateQueries({ queryKey: ["delivery_agents"] });
       queryClient.invalidateQueries({ queryKey: ["agent_payments"] });
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+      queryClient.invalidateQueries({ queryKey: ["agent-returns"] });
       toast.success("تم تحديث سعر الشحن");
     },
   });
