@@ -541,6 +541,10 @@ const AllOrders = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <Button size="sm" variant="outline" onClick={handleExportExcel} className="mr-auto">
+                <FileSpreadsheet className="ml-2 h-4 w-4" />
+                تصدير Excel ({filteredOrders?.length || 0})
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
