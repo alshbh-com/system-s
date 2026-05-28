@@ -11,11 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, PackageX } from "lucide-react";
+import { ArrowLeft, PackageX, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import RescheduleOrderDialog from "@/components/admin/RescheduleOrderDialog";
+import * as XLSX from "xlsx";
 
 interface ReturnItem {
   product_id: string | null;
@@ -402,9 +404,59 @@ const AllOrders = () => {
     return true;
   });
 
+  const handleExportExcel = () => {
+    const list = filteredOrders || [];
+    if (list.length === 0) {
+      toast.error("لا توجد أوردرات للتصدير");
+      return;
+    }
+    const exportData = list.map((order: any) => {
+      const totalAmount = parseFloat(order.total_amount?.toString() || "0");
+      const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
+      const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
+      const totalPrice = totalAmount + customerShipping;
+      const netAmount = totalPrice - agentShipping;
+      const formatted = formatOrderItems(order.order_items || []);
+      const productsText = formatted.map((g: any) => {
+        const sizes = formatSizesDisplay(g.sizes);
+        const parts = [g.name];
+        if (g.color) parts.push(g.color);
+        if (sizes) parts.push(sizes);
+        return `${parts.join(' - ')} (${g.totalQuantity})`;
+      }).join(' | ') || '-';
+      return {
+        "رقم الأوردر": order.order_number || order.id.slice(0, 8),
+        "الاسم": order.customers?.name || "-",
+        "الهاتف": order.customers?.phone || "-",
+        "الهاتف الإضافي": (order.customers as any)?.phone2 || "-",
+        "المحافظة": order.customers?.governorate || "-",
+        "العنوان": order.customers?.address || "-",
+        "المنتج": productsText,
+        "الإجمالي": totalPrice.toFixed(2),
+        "شحن المندوب": agentShipping.toFixed(2),
+        "الصافي": netAmount.toFixed(2),
+        "المندوب": order.delivery_agents?.name || "-",
+        "الحالة": getStatusText(order.status),
+        "الملاحظات": order.notes || "-",
+        "التاريخ": new Date(order.created_at).toLocaleDateString("ar-EG"),
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+      { wch: 35 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      { wch: 18 }, { wch: 16 }, { wch: 25 }, { wch: 14 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "جميع الأوردرات");
+    XLSX.writeFile(wb, `all_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("تم تصدير الأوردرات بنجاح");
+  };
+
   if (isLoading) {
     return <div className="p-8">جاري التحميل...</div>;
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/20 py-8">
@@ -489,6 +541,10 @@ const AllOrders = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <Button size="sm" variant="outline" onClick={handleExportExcel} className="mr-auto">
+                <FileSpreadsheet className="ml-2 h-4 w-4" />
+                تصدير Excel ({filteredOrders?.length || 0})
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -628,57 +684,57 @@ const AllOrders = () => {
                           </TableCell>
                           {canEditAllOrders ? (
                           <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                >
-                                  تعديل الحالة
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>تعديل حالة الأوردر</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    اختر الحالة الجديدة للأوردر #{order.order_number || order.id.slice(0, 8)}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <div className="py-4">
-                                  <Select
-                                    value={editingStatus?.orderId === order.id ? editingStatus.currentStatus : order.status}
-                                    onValueChange={(value) => setEditingStatus({ orderId: order.id, currentStatus: value })}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="pending">قيد الانتظار</SelectItem>
-                                      <SelectItem value="processing">قيد التنفيذ</SelectItem>
-                                      <SelectItem value="shipped">تم الشحن</SelectItem>
-                                      <SelectItem value="delivered">تم التوصيل</SelectItem>
-                                      <SelectItem value="delivered_with_modification">تم التوصيل مع التعديل</SelectItem>
-                                      <SelectItem value="cancelled">ملغي</SelectItem>
-                                      <SelectItem value="returned">مرتجع</SelectItem>
-                                      <SelectItem value="return_no_shipping">مرتجع دون شحن</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setEditingStatus(null)}>إلغاء</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => {
-                                    if (editingStatus) {
-                                      updateStatusMutation.mutate({
-                                        orderId: order.id,
-                                        newStatus: editingStatus.currentStatus
-                                      });
-                                    }
-                                  }}>
-                                    حفظ
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="outline">
+                                    تعديل الحالة
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>تعديل حالة الأوردر</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      اختر الحالة الجديدة للأوردر #{order.order_number || order.id.slice(0, 8)}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <div className="py-4">
+                                    <Select
+                                      value={editingStatus?.orderId === order.id ? editingStatus.currentStatus : order.status}
+                                      onValueChange={(value) => setEditingStatus({ orderId: order.id, currentStatus: value })}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pending">قيد الانتظار</SelectItem>
+                                        <SelectItem value="processing">قيد التنفيذ</SelectItem>
+                                        <SelectItem value="shipped">تم الشحن</SelectItem>
+                                        <SelectItem value="delivered">تم التوصيل</SelectItem>
+                                        <SelectItem value="delivered_with_modification">تم التوصيل مع التعديل</SelectItem>
+                                        <SelectItem value="cancelled">ملغي</SelectItem>
+                                        <SelectItem value="returned">مرتجع</SelectItem>
+                                        <SelectItem value="return_no_shipping">مرتجع دون شحن</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={() => setEditingStatus(null)}>إلغاء</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => {
+                                      if (editingStatus) {
+                                        updateStatusMutation.mutate({
+                                          orderId: order.id,
+                                          newStatus: editingStatus.currentStatus
+                                        });
+                                      }
+                                    }}>
+                                      حفظ
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                              <RescheduleOrderDialog order={order} />
+                            </div>
                           </TableCell>
                           ) : (
                           <TableCell>
