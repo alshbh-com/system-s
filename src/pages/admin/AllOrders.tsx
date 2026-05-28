@@ -404,9 +404,59 @@ const AllOrders = () => {
     return true;
   });
 
+  const handleExportExcel = () => {
+    const list = filteredOrders || [];
+    if (list.length === 0) {
+      toast.error("لا توجد أوردرات للتصدير");
+      return;
+    }
+    const exportData = list.map((order: any) => {
+      const totalAmount = parseFloat(order.total_amount?.toString() || "0");
+      const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
+      const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
+      const totalPrice = totalAmount + customerShipping;
+      const netAmount = totalPrice - agentShipping;
+      const formatted = formatOrderItems(order.order_items || []);
+      const productsText = formatted.map((g: any) => {
+        const sizes = formatSizesDisplay(g.sizes);
+        const parts = [g.name];
+        if (g.color) parts.push(g.color);
+        if (sizes) parts.push(sizes);
+        return `${parts.join(' - ')} (${g.totalQuantity})`;
+      }).join(' | ') || '-';
+      return {
+        "رقم الأوردر": order.order_number || order.id.slice(0, 8),
+        "الاسم": order.customers?.name || "-",
+        "الهاتف": order.customers?.phone || "-",
+        "الهاتف الإضافي": (order.customers as any)?.phone2 || "-",
+        "المحافظة": order.customers?.governorate || "-",
+        "العنوان": order.customers?.address || "-",
+        "المنتج": productsText,
+        "الإجمالي": totalPrice.toFixed(2),
+        "شحن المندوب": agentShipping.toFixed(2),
+        "الصافي": netAmount.toFixed(2),
+        "المندوب": order.delivery_agents?.name || "-",
+        "الحالة": getStatusText(order.status),
+        "الملاحظات": order.notes || "-",
+        "التاريخ": new Date(order.created_at).toLocaleDateString("ar-EG"),
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+      { wch: 35 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+      { wch: 18 }, { wch: 16 }, { wch: 25 }, { wch: 14 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "جميع الأوردرات");
+    XLSX.writeFile(wb, `all_orders_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast.success("تم تصدير الأوردرات بنجاح");
+  };
+
   if (isLoading) {
     return <div className="p-8">جاري التحميل...</div>;
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/20 py-8">
