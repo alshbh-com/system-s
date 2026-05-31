@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +37,7 @@ const AllOrders = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [governorateFilter, setGovernorateFilter] = useState<string>("all");
+  const [governorateFilter, setGovernorateFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [editingStatus, setEditingStatus] = useState<{orderId: string, currentStatus: string} | null>(null);
   
@@ -384,7 +386,7 @@ const AllOrders = () => {
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
     }
-    if (governorateFilter !== "all" && order.customers?.governorate !== governorateFilter) {
+    if (governorateFilter.length > 0 && !governorateFilter.includes(order.customers?.governorate || "")) {
       return false;
     }
     if (searchQuery) {
