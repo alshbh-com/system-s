@@ -983,7 +983,8 @@ const AgentOrders = () => {
           0
         );
 
-        // Upsert by order_id
+        // Upsert by order_id — use current agent_shipping_cost as deduction
+        const currentAgentShipping = parseFloat((order.agent_shipping_cost ?? 0).toString()) || 0;
         const { data: existingReturn, error: existingErr } = await supabase
           .from("returns")
           .select("id")
@@ -998,6 +999,7 @@ const AgentOrders = () => {
               customer_id: order.customer_id,
               delivery_agent_id: order.delivery_agent_id,
               return_amount: returnAmount,
+              shipping_deduction: currentAgentShipping,
               returned_items: returnItems as any,
             })
             .eq("id", existingReturn.id);
@@ -1008,6 +1010,7 @@ const AgentOrders = () => {
             customer_id: order.customer_id,
             delivery_agent_id: order.delivery_agent_id,
             return_amount: returnAmount,
+            shipping_deduction: currentAgentShipping,
             returned_items: returnItems as any,
             notes: "مرتجع كامل",
           });
@@ -1045,22 +1048,18 @@ const AgentOrders = () => {
       
       if (orderError) throw orderError;
 
-      // Sync shipping_deduction on any existing return record for this order
+      // Always sync shipping_deduction on any existing return record for this order
       // so returns/closing always reflect the latest agent shipping cost
       const { data: existingReturn } = await supabase
         .from("returns")
-        .select("id, shipping_deduction")
+        .select("id")
         .eq("order_id", orderId)
         .maybeSingle();
       if (existingReturn?.id) {
-        const currentDeduction = parseFloat((existingReturn.shipping_deduction ?? 0).toString());
-        // Auto-sync only when the deduction wasn't manually overridden
-        if (currentDeduction === oldShipping || currentDeduction === 0) {
-          await supabase
-            .from("returns")
-            .update({ shipping_deduction: newShipping })
-            .eq("id", existingReturn.id);
-        }
+        await supabase
+          .from("returns")
+          .update({ shipping_deduction: newShipping })
+          .eq("id", existingReturn.id);
       }
 
       // Calculate the difference (negative because agent_shipping reduces what agent owes)

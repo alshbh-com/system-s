@@ -174,10 +174,33 @@ const Orders = () => {
             totalProductPrice = safePrice * quantity;
           }
 
-          const productDetails = productName ? [{
-            name: productName, quantity, price: safePrice,
+          // Fallback name if no product column matched: build readable label from row
+          const fallbackName = !productName
+            ? Object.entries(row)
+                .filter(([k, v]) => {
+                  const nk = normalizeKey(k);
+                  if (!String(v ?? "").trim()) return false;
+                  // exclude already-mapped columns
+                  return !["اسم العميل","العميل","الاسم","اسم","name","customer_name","customer",
+                           "الهاتف","رقم الهاتف","تليفون","موبايل","phone","mobile",
+                           "العنوان","العنوان بالتفصيل","address",
+                           "المحافظه","محافظه","governorate","city",
+                           "الشحن","شحن","سعر الشحن","shipping","shipping_cost",
+                           "الاجمالي","الاجمالي","اجمالي المنتجات","اجمالي","المجموع","total","total_amount","amount",
+                           "السعر","سعر المنتج","سعر القطعه","سعر الوحده","سعر","price","unit_price",
+                           "الكميه","العدد","كميه","qty","quantity","count"
+                          ].map(normalizeKey).includes(nk);
+                })
+                .map(([k, v]) => `${k}: ${String(v).trim()}`)
+                .join(" | ")
+            : "";
+
+          const effectiveProductName = productName || fallbackName || "منتج";
+
+          const productDetails = [{
+            name: effectiveProductName, quantity, price: safePrice,
             size: productSize || null, color: productColor || null
-          }] : null;
+          }];
 
           const { data: order, error: oErr } = await supabase
             .from("orders")
@@ -187,23 +210,21 @@ const Orders = () => {
               shipping_cost: shippingCost,
               governorate_id: selectedGov?.id || null,
               status: 'pending',
-              order_details: productDetails ? JSON.stringify(productDetails) : null
+              order_details: JSON.stringify(productDetails)
             }).select().single();
           if (oErr) throw oErr;
 
-          if (productName) {
-            await supabase.from("order_items").insert({
-              order_id: order.id,
-              quantity,
-              price: safePrice,
-              size: productSize || null,
-              color: productColor || null,
-              product_details: JSON.stringify({
-                name: productName, price: safePrice,
-                size: productSize || null, color: productColor || null
-              })
-            });
-          }
+          await supabase.from("order_items").insert({
+            order_id: order.id,
+            quantity,
+            price: safePrice,
+            size: productSize || null,
+            color: productColor || null,
+            product_details: JSON.stringify({
+              name: effectiveProductName, price: safePrice,
+              size: productSize || null, color: productColor || null
+            })
+          });
           success++;
         } catch (err) {
           console.error("Row import error:", err);
