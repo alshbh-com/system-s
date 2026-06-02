@@ -402,6 +402,10 @@ const AllOrders = () => {
     if (governorateFilter.length > 0 && !governorateFilter.includes(order.customers?.governorate || "")) {
       return false;
     }
+    if (agentFilter.length > 0) {
+      const aid = order.delivery_agent_id || "__none__";
+      if (!agentFilter.includes(aid)) return false;
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const orderNumber = order.order_number?.toString() || "";
