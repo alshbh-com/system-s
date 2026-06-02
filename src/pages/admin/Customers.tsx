@@ -60,7 +60,7 @@ const Customers = () => {
   });
 
   const filteredCustomers = customers?.filter(customer => {
-    if (governorateFilter !== "all" && customer.governorate !== governorateFilter) {
+    if (governorateFilter.length > 0 && !governorateFilter.includes(customer.governorate || "")) {
       return false;
     }
     return true;
