@@ -267,7 +267,13 @@ const Cart = () => {
             total_amount: totalAfterDiscount,
             shipping_cost: newShippingCost,
             discount: customerInfo.discount,
-            order_details: customerInfo.orderDetails || null,
+            order_details: JSON.stringify(items.map(it => ({
+              name: it.name,
+              quantity: it.quantity,
+              price: getProductPrice(it.id, it.quantity),
+              size: it.size || null,
+              color: it.color || null,
+            }))),
             notes: customerInfo.notes,
           })
           .eq("id", returnOrderId);
@@ -543,7 +549,13 @@ const Cart = () => {
             total_amount: itemsTotal,
             shipping_cost: finalShipping,
             discount: 0,
-            order_details: customerInfo.orderDetails || null,
+            order_details: JSON.stringify(items.map(it => ({
+              name: it.name,
+              quantity: it.quantity,
+              price: getProductPrice(it.id, it.quantity),
+              size: it.size || null,
+              color: it.color || null,
+            }))),
             notes: customerInfo.notes,
             status: "pending"
           })
@@ -937,18 +949,6 @@ const Cart = () => {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="orderDetails" className="text-base font-semibold mb-2 block">تفاصيل الأوردر (اختياري)</Label>
-                  <Textarea
-                    id="orderDetails"
-                    value={customerInfo.orderDetails}
-                    onChange={(e) => setCustomerInfo({...customerInfo, orderDetails: e.target.value})}
-                    placeholder="أي تفاصيل خاصة بالأوردر..."
-                    rows={2}
-                    className="text-base"
-                    autoComplete="off"
-                  />
-                </div>
 
                 <div>
                   <Label htmlFor="notes" className="text-base font-semibold mb-2 block">ملاحظات</Label>

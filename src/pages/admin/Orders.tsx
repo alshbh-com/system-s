@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [governorateFilter, setGovernorateFilter] = useState<string>("all");
+  const [governorateFilter, setGovernorateFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [barcodeOrders, setBarcodeOrders] = useState<string[]>([""]);
@@ -912,7 +913,7 @@ const Orders = () => {
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
     }
-    if (governorateFilter !== "all" && order.customers?.governorate !== governorateFilter) {
+    if (governorateFilter.length > 0 && !governorateFilter.includes(order.customers?.governorate || "")) {
       return false;
     }
     if (searchQuery) {
@@ -1080,19 +1081,43 @@ const Orders = () => {
                 )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">فلتر حسب المحافظة:</span>
-                  <Select value={governorateFilter} onValueChange={setGovernorateFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="جميع المحافظات" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع المحافظات</SelectItem>
-                      {governorates?.map((gov) => (
-                        <SelectItem key={gov.id} value={gov.name}>
-                          {gov.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-56 justify-between">
+                        <span className="truncate">
+                          {governorateFilter.length === 0
+                            ? "جميع المحافظات"
+                            : `${governorateFilter.length} محافظة محددة`}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
+                      <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
+                        <button type="button" className="text-xs text-primary hover:underline"
+                          onClick={() => setGovernorateFilter(governorates?.map((g: any) => g.name) || [])}>
+                          تحديد الكل
+                        </button>
+                        <button type="button" className="text-xs text-muted-foreground hover:underline"
+                          onClick={() => setGovernorateFilter([])}>
+                          مسح
+                        </button>
+                      </div>
+                      {governorates?.map((gov: any) => {
+                        const checked = governorateFilter.includes(gov.name);
+                        return (
+                          <label key={gov.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                setGovernorateFilter((prev) => v ? [...prev, gov.name] : prev.filter((n) => n !== gov.name));
+                              }}
+                            />
+                            <span className="text-sm">{gov.name}</span>
+                          </label>
+                        );
+                      })}
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>

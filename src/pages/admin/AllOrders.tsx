@@ -38,6 +38,7 @@ const AllOrders = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [governorateFilter, setGovernorateFilter] = useState<string[]>([]);
+  const [agentFilter, setAgentFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [editingStatus, setEditingStatus] = useState<{orderId: string, currentStatus: string} | null>(null);
   
@@ -90,6 +91,18 @@ const AllOrders = () => {
         .select("*")
         .order("name", { ascending: true });
       
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: agentsList } = useQuery({
+    queryKey: ["delivery_agents_for_filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_agents")
+        .select("id, name, serial_number")
+        .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -389,6 +402,10 @@ const AllOrders = () => {
     if (governorateFilter.length > 0 && !governorateFilter.includes(order.customers?.governorate || "")) {
       return false;
     }
+    if (agentFilter.length > 0) {
+      const aid = order.delivery_agent_id || "__none__";
+      if (!agentFilter.includes(aid)) return false;
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const orderNumber = order.order_number?.toString() || "";
@@ -418,14 +435,33 @@ const AllOrders = () => {
       const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
       const totalPrice = totalAmount + customerShipping;
       const netAmount = totalPrice - agentShipping;
+      let productsText = '-';
       const formatted = formatOrderItems(order.order_items || []);
-      const productsText = formatted.map((g: any) => {
-        const sizes = formatSizesDisplay(g.sizes);
-        const parts = [g.name];
-        if (g.color) parts.push(g.color);
-        if (sizes) parts.push(sizes);
-        return `${parts.join(' - ')} (${g.totalQuantity})`;
-      }).join(' | ') || '-';
+      if (formatted.length > 0 && formatted.some((g: any) => g.name && g.name !== 'منتج محذوف')) {
+        productsText = formatted.map((g: any) => {
+          const sizes = formatSizesDisplay(g.sizes);
+          const parts = [g.name];
+          if (g.color) parts.push(g.color);
+          if (sizes) parts.push(sizes);
+          return `${parts.join(' - ')} (${g.totalQuantity})`;
+        }).join(' | ');
+      } else if (order.order_details) {
+        try {
+          const parsed = JSON.parse(order.order_details);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            productsText = parsed.map((it: any) => {
+              const parts = [it.name || 'منتج'];
+              if (it.color) parts.push(it.color);
+              if (it.size) parts.push(it.size);
+              return `${parts.join(' - ')} (${it.quantity || 1})`;
+            }).join(' | ');
+          } else {
+            productsText = order.order_details;
+          }
+        } catch {
+          productsText = order.order_details;
+        }
+      }
       return {
         "رقم الأوردر": order.order_number || order.id.slice(0, 8),
         "الاسم": order.customers?.name || "-",
@@ -572,6 +608,71 @@ const AllOrders = () => {
                             }}
                           />
                           <span className="text-sm">{gov.name}</span>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">فلتر حسب المندوب:</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-56 justify-between">
+                      <span className="truncate">
+                        {agentFilter.length === 0
+                          ? "جميع المندوبين"
+                          : `${agentFilter.length} مندوب محدد`}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setAgentFilter([...(agentsList?.map((a: any) => a.id) || []), "__none__"])}
+                      >
+                        تحديد الكل
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setAgentFilter([])}
+                      >
+                        مسح
+                      </button>
+                    </div>
+                    <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                      <Checkbox
+                        checked={agentFilter.includes("__none__")}
+                        onCheckedChange={(v) => {
+                          setAgentFilter((prev) =>
+                            v ? [...prev, "__none__"] : prev.filter((n) => n !== "__none__")
+                          );
+                        }}
+                      />
+                      <span className="text-sm text-muted-foreground">بدون مندوب</span>
+                    </label>
+                    {agentsList?.map((agent: any) => {
+                      const checked = agentFilter.includes(agent.id);
+                      return (
+                        <label
+                          key={agent.id}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setAgentFilter((prev) =>
+                                v ? [...prev, agent.id] : prev.filter((n) => n !== agent.id)
+                              );
+                            }}
+                          />
+                          <span className="text-sm">
+                            {agent.name}
+                            {agent.serial_number ? ` (#${agent.serial_number})` : ""}
+                          </span>
                         </label>
                       );
                     })}
