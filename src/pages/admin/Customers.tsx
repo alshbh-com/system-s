@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import SearchBar from "@/components/admin/SearchBar";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 
 const Customers = () => {
