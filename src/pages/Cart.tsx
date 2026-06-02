@@ -937,18 +937,6 @@ const Cart = () => {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="orderDetails" className="text-base font-semibold mb-2 block">تفاصيل الأوردر (اختياري)</Label>
-                  <Textarea
-                    id="orderDetails"
-                    value={customerInfo.orderDetails}
-                    onChange={(e) => setCustomerInfo({...customerInfo, orderDetails: e.target.value})}
-                    placeholder="أي تفاصيل خاصة بالأوردر..."
-                    rows={2}
-                    className="text-base"
-                    autoComplete="off"
-                  />
-                </div>
 
                 <div>
                   <Label htmlFor="notes" className="text-base font-semibold mb-2 block">ملاحظات</Label>
