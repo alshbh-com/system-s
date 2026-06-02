@@ -549,7 +549,13 @@ const Cart = () => {
             total_amount: itemsTotal,
             shipping_cost: finalShipping,
             discount: 0,
-            order_details: customerInfo.orderDetails || null,
+            order_details: JSON.stringify(items.map(it => ({
+              name: it.name,
+              quantity: it.quantity,
+              price: getProductPrice(it.id, it.quantity),
+              size: it.size || null,
+              color: it.color || null,
+            }))),
             notes: customerInfo.notes,
             status: "pending"
           })
