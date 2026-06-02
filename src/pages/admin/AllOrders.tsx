@@ -96,6 +96,18 @@ const AllOrders = () => {
     },
   });
 
+  const { data: agentsList } = useQuery({
+    queryKey: ["delivery_agents_for_filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_agents")
+        .select("id, name, serial_number")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Use the new formatting utility
   const getFormattedItems = (orderItems: any[]) => {
     if (!orderItems || orderItems.length === 0) return null;
