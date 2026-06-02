@@ -19,7 +19,7 @@ const Customers = () => {
   const queryClient = useQueryClient();
   const { canEdit } = useAdminAuth();
   const canEditCustomers = canEdit('customers');
-  const [governorateFilter, setGovernorateFilter] = useState<string>("all");
+  const [governorateFilter, setGovernorateFilter] = useState<string[]>([]);
 
   const egyptGovernorates = [
     "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "الشرقية", "المنوفية", "القليوبية",
