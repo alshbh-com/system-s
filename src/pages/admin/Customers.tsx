@@ -89,19 +89,43 @@ const Customers = () => {
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium">فلتر حسب المحافظة:</span>
-                <Select value={governorateFilter} onValueChange={setGovernorateFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="جميع المحافظات" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع المحافظات</SelectItem>
-                    {egyptGovernorates.map((gov) => (
-                      <SelectItem key={gov} value={gov}>
-                        {gov}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-56 justify-between">
+                      <span className="truncate">
+                        {governorateFilter.length === 0
+                          ? "جميع المحافظات"
+                          : `${governorateFilter.length} محافظة محددة`}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
+                      <button type="button" className="text-xs text-primary hover:underline"
+                        onClick={() => setGovernorateFilter([...egyptGovernorates])}>
+                        تحديد الكل
+                      </button>
+                      <button type="button" className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setGovernorateFilter([])}>
+                        مسح
+                      </button>
+                    </div>
+                    {egyptGovernorates.map((gov) => {
+                      const checked = governorateFilter.includes(gov);
+                      return (
+                        <label key={gov} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setGovernorateFilter((prev) => v ? [...prev, gov] : prev.filter((n) => n !== gov));
+                            }}
+                          />
+                          <span className="text-sm">{gov}</span>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardHeader>
