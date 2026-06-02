@@ -1314,14 +1314,33 @@ const AgentOrders = () => {
       const totalPrice = totalAmount + customerShipping;
       const netAmount = totalPrice - agentShipping;
 
+      let productsText = '-';
       const formattedItems = formatOrderItems(order.order_items || []);
-      const productsText = formattedItems.map(g => {
-        const sizes = formatSizesDisplay(g.sizes);
-        const parts = [g.name];
-        if (g.color) parts.push(g.color);
-        if (sizes) parts.push(sizes);
-        return `${parts.join(' - ')} (${g.totalQuantity})`;
-      }).join(' | ') || '-';
+      if (formattedItems.length > 0 && formattedItems.some((g: any) => g.name && g.name !== 'منتج محذوف')) {
+        productsText = formattedItems.map(g => {
+          const sizes = formatSizesDisplay(g.sizes);
+          const parts = [g.name];
+          if (g.color) parts.push(g.color);
+          if (sizes) parts.push(sizes);
+          return `${parts.join(' - ')} (${g.totalQuantity})`;
+        }).join(' | ');
+      } else if (order.order_details) {
+        try {
+          const parsed = JSON.parse(order.order_details);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            productsText = parsed.map((it: any) => {
+              const parts = [it.name || 'منتج'];
+              if (it.color) parts.push(it.color);
+              if (it.size) parts.push(it.size);
+              return `${parts.join(' - ')} (${it.quantity || 1})`;
+            }).join(' | ');
+          } else {
+            productsText = order.order_details;
+          }
+        } catch {
+          productsText = order.order_details;
+        }
+      }
 
       return {
         "رقم الأوردر": order.order_number || order.id.slice(0, 8),
