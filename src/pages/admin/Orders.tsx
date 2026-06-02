@@ -32,7 +32,7 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [governorateFilter, setGovernorateFilter] = useState<string>("all");
+  const [governorateFilter, setGovernorateFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [barcodeOrders, setBarcodeOrders] = useState<string[]>([""]);
