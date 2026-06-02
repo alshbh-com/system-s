@@ -614,6 +614,71 @@ const AllOrders = () => {
                   </PopoverContent>
                 </Popover>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">فلتر حسب المندوب:</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-56 justify-between">
+                      <span className="truncate">
+                        {agentFilter.length === 0
+                          ? "جميع المندوبين"
+                          : `${agentFilter.length} مندوب محدد`}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 max-h-72 overflow-y-auto" align="start">
+                    <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setAgentFilter([...(agentsList?.map((a: any) => a.id) || []), "__none__"])}
+                      >
+                        تحديد الكل
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setAgentFilter([])}
+                      >
+                        مسح
+                      </button>
+                    </div>
+                    <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                      <Checkbox
+                        checked={agentFilter.includes("__none__")}
+                        onCheckedChange={(v) => {
+                          setAgentFilter((prev) =>
+                            v ? [...prev, "__none__"] : prev.filter((n) => n !== "__none__")
+                          );
+                        }}
+                      />
+                      <span className="text-sm text-muted-foreground">بدون مندوب</span>
+                    </label>
+                    {agentsList?.map((agent: any) => {
+                      const checked = agentFilter.includes(agent.id);
+                      return (
+                        <label
+                          key={agent.id}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setAgentFilter((prev) =>
+                                v ? [...prev, agent.id] : prev.filter((n) => n !== agent.id)
+                              );
+                            }}
+                          />
+                          <span className="text-sm">
+                            {agent.name}
+                            {agent.serial_number ? ` (#${agent.serial_number})` : ""}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Button size="sm" variant="outline" onClick={handleExportExcel} className="mr-auto">
                 <FileSpreadsheet className="ml-2 h-4 w-4" />
                 تصدير Excel ({filteredOrders?.length || 0})
