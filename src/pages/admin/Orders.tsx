@@ -913,7 +913,7 @@ const Orders = () => {
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
     }
-    if (governorateFilter !== "all" && order.customers?.governorate !== governorateFilter) {
+    if (governorateFilter.length > 0 && !governorateFilter.includes(order.customers?.governorate || "")) {
       return false;
     }
     if (searchQuery) {
