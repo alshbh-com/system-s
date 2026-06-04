@@ -121,6 +121,19 @@ const Invoices = () => {
     },
   });
 
+  // جلب المناديب للفلتر
+  const { data: agents } = useQuery({
+    queryKey: ["agents-filter-invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_agents")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // تحويل التاريخ ليوم Cairo
   const getDateKey = (value: string | Date) => {
     const d = typeof value === "string" ? new Date(value) : value;
