@@ -1885,6 +1885,12 @@ const AgentOrders = () => {
                         طباعة
                       </Button>
                       {canEditAgentOrders && (
+                      <BulkRescheduleDialog
+                        orders={(filteredOrders || []).filter(o => selectedOrders.includes(o.id))}
+                        onSuccess={() => setSelectedOrders([])}
+                      />
+                      )}
+                      {canEditAgentOrders && (
                       <Button 
                         onClick={() => setBulkStatusDialogOpen(true)} 
                         size="sm" 
