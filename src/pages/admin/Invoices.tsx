@@ -180,10 +180,16 @@ const Invoices = () => {
         const orderGov = order.governorates?.name || order.customers?.governorate || "";
         if (!governorateFilters.includes(orderGov)) return false;
       }
+
+      // فلتر المناديب (متعدد) — يعرض الأوردرات المعينة حالياً للمناديب المحددين
+      if (agentFilters.length > 0) {
+        const agentId = (order as any).delivery_agent_id;
+        if (!agentId || !agentFilters.includes(agentId)) return false;
+      }
       
       return true;
     });
-  }, [orders, dateFilter, governorateFilters, searchQuery]);
+  }, [orders, dateFilter, governorateFilters, agentFilters, searchQuery]);
 
   // تصدير Excel للأوردرات المفلترة/المحددة فقط
   const handleExportExcel = () => {
