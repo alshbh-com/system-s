@@ -647,18 +647,21 @@ const Orders = () => {
         "الهاتف الإضافي": (order.customers as any)?.phone2 || "-",
         "العنوان": order.customers?.address,
         "تفاصيل الأوردر": (() => {
+          const formatted = getFormattedItems(order.order_items);
+          if (formatted && formatted.length > 0) {
+            return formatted.map((item) => `${item.name} × ${item.totalQuantity}${item.color ? ` (لون: ${item.color})` : ""}`).join("، ");
+          }
           if (order.order_details) {
             try {
               const parsed = JSON.parse(order.order_details);
               if (Array.isArray(parsed)) {
-                return parsed.map((item: any) => `${item.name} × ${item.quantity}`).join(", ");
+                return parsed.map((item: any) => `${item.name} × ${item.quantity}${item.color ? ` (لون: ${item.color})` : ""}`).join("، ");
               }
             } catch (e) {
               return order.order_details;
             }
           }
-          const formatted = getFormattedItems(order.order_items);
-          return formatted?.map((item) => `${item.name} × ${item.totalQuantity}`).join(", ") || "-";
+          return "-";
         })(),
         "الصافي": totalAmount.toFixed(2),
         "الخصم": discount.toFixed(2),
