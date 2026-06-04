@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, PackageX, Printer, Download, AlertTriangle, Trash2, MessageCircle, ArrowDown, Plus, Edit2, ChevronDown, ChevronUp, Calendar, Package, Check, Lock } from "lucide-react";
 import RescheduleOrderDialog from "@/components/admin/RescheduleOrderDialog";
+import BulkRescheduleDialog from "@/components/admin/BulkRescheduleDialog";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -1884,6 +1885,12 @@ const AgentOrders = () => {
                         طباعة
                       </Button>
                       {canEditAgentOrders && (
+                      <BulkRescheduleDialog
+                        orders={(filteredOrders || []).filter(o => selectedOrders.includes(o.id))}
+                        onSuccess={() => setSelectedOrders([])}
+                      />
+                      )}
+                      {canEditAgentOrders && (
                       <Button 
                         onClick={() => setBulkStatusDialogOpen(true)} 
                         size="sm" 
@@ -1955,16 +1962,42 @@ const AgentOrders = () => {
                             <TableCell className="max-w-xs whitespace-normal break-words">
                               {order.customers?.address}
                             </TableCell>
-                            <TableCell className="max-w-[200px]">
+                            <TableCell className="max-w-[220px]">
                               <div className="space-y-1">
-                                {(order.order_items || []).map((item: any, idx: number) => (
-                                  <div key={idx} className="flex items-center justify-between text-sm gap-2">
-                                    <span className="truncate flex-1">{item.products?.name || "منتج محذوف"}</span>
-                                    <Badge variant="outline" className="shrink-0">
-                                      {item.quantity}
-                                    </Badge>
-                                  </div>
-                                ))}
+                                {(() => {
+                                  const items = order.order_items || [];
+                                  if (items.length > 0) {
+                                    return items.map((item: any, idx: number) => (
+                                      <div key={idx} className="flex items-center justify-between text-sm gap-2">
+                                        <span className="truncate flex-1">
+                                          {item.products?.name || "منتج محذوف"}
+                                          {item.color ? <span className="text-xs text-muted-foreground"> · {item.color}</span> : null}
+                                        </span>
+                                        <Badge variant="outline" className="shrink-0">
+                                          {item.quantity}
+                                        </Badge>
+                                      </div>
+                                    ));
+                                  }
+                                  // Fallback to order_details JSON for store orders
+                                  if (order.order_details) {
+                                    try {
+                                      const parsed = JSON.parse(order.order_details);
+                                      if (Array.isArray(parsed)) {
+                                        return parsed.map((it: any, idx: number) => (
+                                          <div key={idx} className="flex items-center justify-between text-sm gap-2">
+                                            <span className="truncate flex-1">
+                                              {it.name || "منتج"}
+                                              {it.color ? <span className="text-xs text-muted-foreground"> · {it.color}</span> : null}
+                                            </span>
+                                            <Badge variant="outline" className="shrink-0">{it.quantity || 1}</Badge>
+                                          </div>
+                                        ));
+                                      }
+                                    } catch {}
+                                  }
+                                  return <span className="text-xs text-muted-foreground">-</span>;
+                                })()}
                               </div>
                             </TableCell>
                             <TableCell className="font-bold text-blue-600">

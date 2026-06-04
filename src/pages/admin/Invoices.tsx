@@ -74,6 +74,7 @@ const Invoices = () => {
   // فلاتر
   const [dateFilter, setDateFilter] = useState<string>("");
   const [governorateFilters, setGovernorateFilters] = useState<string[]>([]);
+  const [agentFilters, setAgentFilters] = useState<string[]>([]);
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ["orders-for-invoices"],
@@ -114,6 +115,19 @@ const Invoices = () => {
         .from("offices")
         .select("*")
         .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // جلب المناديب للفلتر
+  const { data: agents } = useQuery({
+    queryKey: ["agents-filter-invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("delivery_agents")
+        .select("id, name")
         .order("name");
       if (error) throw error;
       return data;
@@ -166,10 +180,16 @@ const Invoices = () => {
         const orderGov = order.governorates?.name || order.customers?.governorate || "";
         if (!governorateFilters.includes(orderGov)) return false;
       }
+
+      // فلتر المناديب (متعدد) — يعرض الأوردرات المعينة حالياً للمناديب المحددين
+      if (agentFilters.length > 0) {
+        const agentId = (order as any).delivery_agent_id;
+        if (!agentId || !agentFilters.includes(agentId)) return false;
+      }
       
       return true;
     });
-  }, [orders, dateFilter, governorateFilters, searchQuery]);
+  }, [orders, dateFilter, governorateFilters, agentFilters, searchQuery]);
 
   // تصدير Excel للأوردرات المفلترة/المحددة فقط
   const handleExportExcel = () => {
@@ -575,7 +595,74 @@ const Invoices = () => {
                   </div>
                 )}
               </div>
-              
+
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs">المندوب (متعدد)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-56 justify-between font-normal">
+                      <span className="truncate">
+                        {agentFilters.length === 0
+                          ? "كل المناديب"
+                          : `${agentFilters.length} مندوب`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 max-h-80 overflow-y-auto" align="start">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setAgentFilters(agents?.map(a => a.id) || [])}
+                      >
+                        تحديد الكل
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => setAgentFilters([])}
+                      >
+                        مسح
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {agents?.map((ag) => {
+                        const checked = agentFilters.includes(ag.id);
+                        return (
+                          <label
+                            key={ag.id}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-sm"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                if (c) setAgentFilters([...agentFilters, ag.id]);
+                                else setAgentFilters(agentFilters.filter(id => id !== ag.id));
+                              }}
+                            />
+                            <span>{ag.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {agentFilters.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1 max-w-56">
+                    {agentFilters.map((id) => {
+                      const ag = agents?.find(a => a.id === id);
+                      if (!ag) return null;
+                      return (
+                        <Badge key={id} variant="secondary" className="text-xs cursor-pointer" onClick={() => setAgentFilters(agentFilters.filter(x => x !== id))}>
+                          {ag.name} ×
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-1">
                 <Label className="text-xs">المكتب (للفاتورة)</Label>
                 <Select value={selectedOfficeId} onValueChange={setSelectedOfficeId}>
@@ -599,6 +686,7 @@ const Invoices = () => {
                 onClick={() => {
                   setDateFilter("");
                   setGovernorateFilters([]);
+                  setAgentFilters([]);
                   setSearchQuery("");
                 }}
               >

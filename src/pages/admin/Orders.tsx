@@ -647,18 +647,21 @@ const Orders = () => {
         "الهاتف الإضافي": (order.customers as any)?.phone2 || "-",
         "العنوان": order.customers?.address,
         "تفاصيل الأوردر": (() => {
+          const formatted = getFormattedItems(order.order_items);
+          if (formatted && formatted.length > 0) {
+            return formatted.map((item) => `${item.name} × ${item.totalQuantity}${item.color ? ` (لون: ${item.color})` : ""}`).join("، ");
+          }
           if (order.order_details) {
             try {
               const parsed = JSON.parse(order.order_details);
               if (Array.isArray(parsed)) {
-                return parsed.map((item: any) => `${item.name} × ${item.quantity}`).join(", ");
+                return parsed.map((item: any) => `${item.name} × ${item.quantity}${item.color ? ` (لون: ${item.color})` : ""}`).join("، ");
               }
             } catch (e) {
               return order.order_details;
             }
           }
-          const formatted = getFormattedItems(order.order_items);
-          return formatted?.map((item) => `${item.name} × ${item.totalQuantity}`).join(", ") || "-";
+          return "-";
         })(),
         "الصافي": totalAmount.toFixed(2),
         "الخصم": discount.toFixed(2),
@@ -1181,16 +1184,13 @@ const Orders = () => {
                                     {formattedItems.map((item, idx) => (
                                       <div key={idx} className="bg-muted/50 p-2 rounded">
                                         <div className="font-medium">{item.name} × {item.totalQuantity}</div>
-                                        <div className="text-muted-foreground mt-1 flex flex-wrap gap-2">
-                                          <span className="bg-primary/10 px-2 py-0.5 rounded text-primary">
-                                            {formatSizesDisplay(item.sizes)}
-                                          </span>
-                                          {item.color && (
+                                        {item.color && (
+                                          <div className="text-muted-foreground mt-1">
                                             <span className="bg-secondary/50 px-2 py-0.5 rounded">
                                               لون: {item.color}
                                             </span>
-                                          )}
-                                        </div>
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -1206,10 +1206,9 @@ const Orders = () => {
                                         {parsed.map((item: any, idx: number) => (
                                           <div key={idx} className="bg-muted/50 p-2 rounded">
                                             <div className="font-medium">{item.name} × {item.quantity}</div>
-                                            {(item.size || item.color) && (
-                                              <div className="text-muted-foreground mt-1 flex flex-wrap gap-2">
-                                                {item.size && <span className="bg-primary/10 px-2 py-0.5 rounded text-primary">مقاس: {item.size}</span>}
-                                                {item.color && <span className="bg-secondary/50 px-2 py-0.5 rounded">لون: {item.color}</span>}
+                                            {item.color && (
+                                              <div className="text-muted-foreground mt-1">
+                                                <span className="bg-secondary/50 px-2 py-0.5 rounded">لون: {item.color}</span>
                                               </div>
                                             )}
                                           </div>
