@@ -1436,92 +1436,16 @@ const AgentOrders = () => {
       toast.error("يرجى اختيار أوردرات للطباعة");
       return;
     }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const selectedOrdersData = orders?.filter(o => selectedOrders.includes(o.id));
-    
-    const invoicesHtml = selectedOrdersData?.map(order => {
-      const orderItems = order.order_items?.map((item: any) => `
-        <tr>
-          <td style="border: 1px solid #ddd; padding: 8px;">${item.products?.name}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${parseFloat(item.price.toString()).toFixed(2)} ج.م</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)} ج.م</td>
-        </tr>
-      `).join('');
-
-      const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
-      const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
-      const totalAmount = parseFloat(order.total_amount.toString());
-      const discount = parseFloat(order.discount?.toString() || "0");
-      const totalPrice = totalAmount + customerShipping;
-      const netAmount = totalPrice - agentShipping;
-
-      return `
-        <div style="page-break-after: always; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="/images/magou-logo.jpg" alt="Magou Fashion Logo" style="max-width: 150px; height: auto;" />
-          </div>
-          <h1 style="text-align: center; margin: 10px 0;">فاتورة</h1>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <div style="margin: 20px 0; line-height: 1.8;">
-            <p><strong>رقم الأوردر:</strong> #${order.order_number || order.id.slice(0, 8)}</p>
-            <p><strong>التاريخ:</strong> ${(order as any).assigned_at ? new Date((order as any).assigned_at).toLocaleDateString('ar-EG') : '-'}</p>
-            <p><strong>اسم العميل:</strong> ${order.customers?.name}</p>
-            <p><strong>الهاتف:</strong> ${order.customers?.phone}</p>
-            <p><strong>الهاتف 2:</strong> ${(order.customers as any)?.phone2 || '-'}</p>
-            <p><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</p>
-            <p><strong>العنوان بالتفصيل:</strong> ${order.customers?.address}</p>
-            ${order.notes ? `<p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-          </div>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead>
-              <tr>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">المنتج</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">الكمية</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">السعر</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems}
-            </tbody>
-          </table>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <div style="margin-top: 20px; line-height: 2;">
-            <p><strong>سعر المنتجات:</strong> ${totalAmount.toFixed(2)} ج.م</p>
-            <p><strong>شحن العميل:</strong> ${customerShipping.toFixed(2)} ج.م</p>
-            ${discount > 0 ? `<p><strong>خصم:</strong> ${discount.toFixed(2)} ج.م</p>` : ''}
-            <p style="font-size: 18px;"><strong>الإجمالي:</strong> ${totalPrice.toFixed(2)} ج.م</p>
-            <p><strong>شحن المندوب:</strong> ${agentShipping.toFixed(2)} ج.م</p>
-            <p style="font-size: 20px; font-weight: bold; color: green;">المطلوب من المندوب: ${netAmount.toFixed(2)} ج.م</p>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>أوردرات المندوب</title>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            @media print {
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          ${invoicesHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    const selectedOrdersData = (orders || []).filter(o => selectedOrders.includes(o.id));
+    if (!selectedOrdersData.length) return;
+    printUnifiedInvoices(selectedOrdersData as any, {
+      brandName: invoiceName,
+      watermarkText: invoiceName,
+      logoUrl: null,
+      copies: 1,
+    });
   };
+
 
   const handleBulkStatusUpdate = async () => {
     if (selectedOrders.length === 0 || !bulkStatus) {
