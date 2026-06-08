@@ -22,6 +22,8 @@ import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useDailyCashbox, getDailyCashboxName } from "@/hooks/useDailyCashbox";
+import { useTheme } from "@/contexts/ThemeContext";
+import { printInvoices as printUnifiedInvoices } from "@/lib/invoiceTemplate";
 
 const statusLabels: Record<string, string> = {
   shipped: "تم الشحن",
@@ -43,6 +45,7 @@ const AgentOrders = () => {
   const { logAction } = useActivityLogger();
   const { currentUser, canEdit } = useAdminAuth();
   const canEditAgentOrders = canEdit('agent_orders');
+  const { invoiceName } = useTheme();
   const summaryRef = useRef<HTMLDivElement>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
