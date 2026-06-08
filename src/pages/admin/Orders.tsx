@@ -717,8 +717,6 @@ const Orders = () => {
   };
 
 
-    printWindow.print();
-  };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
