@@ -1529,88 +1529,14 @@ const AgentOrders = () => {
   };
 
   const handlePrintOrder = (order: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const orderItems = order.order_items?.map((item: any) => `
-      <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;">${item.products?.name}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${parseFloat(item.price.toString()).toFixed(2)} ج.م</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)} ج.م</td>
-      </tr>
-    `).join('');
-
-    const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
-    const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
-    const totalAmount = parseFloat(order.total_amount.toString());
-    const discount = parseFloat(order.discount?.toString() || "0");
-    const totalPrice = totalAmount + customerShipping;
-    const netAmount = totalPrice - agentShipping;
-
-    printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>فاتورة - ${order.order_number || order.id.slice(0, 8)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .logo { text-align: center; margin-bottom: 20px; }
-            .logo img { max-width: 150px; height: auto; }
-            h1 { text-align: center; margin: 10px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-            th { background-color: #f2f2f2; }
-            .info { margin: 20px 0; line-height: 1.8; }
-            .total { font-size: 16px; margin-top: 20px; line-height: 2; }
-            .final-total { font-size: 20px; font-weight: bold; color: green; }
-            hr { border: 1px solid #ddd; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="logo">
-            <img src="/images/magou-logo.jpg" alt="Magou Fashion Logo" />
-          </div>
-          <h1>فاتورة</h1>
-          <hr/>
-          <div class="info">
-            <p><strong>رقم الأوردر:</strong> #${order.order_number || order.id.slice(0, 8)}</p>
-            <p><strong>التاريخ:</strong> ${(order as any).assigned_at ? new Date((order as any).assigned_at).toLocaleDateString('ar-EG') : '-'}</p>
-            <p><strong>اسم العميل:</strong> ${order.customers?.name}</p>
-            <p><strong>الهاتف:</strong> ${order.customers?.phone}</p>
-            <p><strong>الهاتف 2:</strong> ${(order.customers as any)?.phone2 || '-'}</p>
-            <p><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</p>
-            <p><strong>العنوان بالتفصيل:</strong> ${order.customers?.address}</p>
-            ${order.notes ? `<p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-          </div>
-          <hr/>
-          <table>
-            <thead>
-              <tr>
-                <th>المنتج</th>
-                <th>الكمية</th>
-                <th>السعر</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems}
-            </tbody>
-          </table>
-          <hr/>
-          <div class="total">
-            <p><strong>سعر المنتجات:</strong> ${totalAmount.toFixed(2)} ج.م</p>
-            <p><strong>شحن العميل:</strong> ${customerShipping.toFixed(2)} ج.م</p>
-            ${discount > 0 ? `<p><strong>خصم:</strong> ${discount.toFixed(2)} ج.م</p>` : ''}
-            <p style="font-size: 18px;"><strong>الإجمالي:</strong> ${totalPrice.toFixed(2)} ج.م</p>
-            <p><strong>شحن المندوب:</strong> ${agentShipping.toFixed(2)} ج.م</p>
-            <p class="final-total">المطلوب من المندوب: ${netAmount.toFixed(2)} ج.م</p>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    printUnifiedInvoices([order] as any, {
+      brandName: invoiceName,
+      watermarkText: invoiceName,
+      logoUrl: null,
+      copies: 1,
+    });
   };
+
 
   // Print summary function
   const handlePrintSummary = () => {
