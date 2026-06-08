@@ -20,12 +20,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import * as XLSX from 'xlsx';
 import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { printInvoices as printUnifiedInvoices } from "@/lib/invoiceTemplate";
 
 const Orders = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { canEdit } = useAdminAuth();
   const canEditOrders = canEdit('orders');
+  const { invoiceName } = useTheme();
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [bulkAgentId, setBulkAgentId] = useState<string>("");
   const [bulkShippingCost, setBulkShippingCost] = useState<number>(0);
@@ -703,181 +706,17 @@ const Orders = () => {
       toast.error("يرجى اختيار أوردرات للطباعة");
       return;
     }
+    const selectedOrdersData = (orders || []).filter(o => selectedOrders.includes(o.id));
+    if (!selectedOrdersData.length) return;
+    printUnifiedInvoices(selectedOrdersData as any, {
+      brandName: invoiceName,
+      watermarkText: invoiceName,
+      logoUrl: null,
+      copies: 1,
+    });
+  };
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
 
-    const selectedOrdersData = orders?.filter(o => selectedOrders.includes(o.id));
-    
-    const invoicesHtml = selectedOrdersData?.map(order => {
-      // Build items with size and color
-      let orderItemsHtml = '';
-      
-      // Try parsing order_details for external store orders
-      if (order.order_details) {
-        try {
-          const parsed = JSON.parse(order.order_details);
-          if (Array.isArray(parsed)) {
-            orderItemsHtml = parsed.map((item: any) => `
-              <tr>
-                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.name || '-'}</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.size || '-'}</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.color || '-'}</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: center;">${parseFloat(item.price?.toString() || "0").toFixed(2)} ج.م</td>
-              </tr>
-            `).join('');
-          }
-        } catch (e) {
-          // Not JSON
-        }
-      }
-      
-      if (!orderItemsHtml && order.order_items) {
-        const formatted = getFormattedItems(order.order_items);
-        orderItemsHtml = formatted?.map((item) => `
-          <tr>
-            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.name}</td>
-            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${formatSizesDisplay(item.sizes)}</td>
-            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.color || '-'}</td>
-            <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.totalPrice.toFixed(2)} ج.م</td>
-          </tr>
-        `).join('') || '';
-      }
-
-      const totalAmount = parseFloat(order.total_amount?.toString() || "0");
-      const shippingCost = parseFloat(order.shipping_cost?.toString() || "0");
-      const finalAmount = totalAmount + shippingCost;
-
-      // Build numbered items list (instead of a table)
-      let itemsListHtml = '';
-      const itemsArr: any[] = [];
-      if (order.order_details) {
-        try {
-          const parsed = JSON.parse(order.order_details);
-          if (Array.isArray(parsed)) parsed.forEach((it: any) => itemsArr.push({
-            name: it.name || '-', size: it.size || '-', color: it.color || '-', price: parseFloat(it.price?.toString() || '0')
-          }));
-        } catch (e) {}
-      }
-      if (itemsArr.length === 0 && order.order_items) {
-        const formatted = getFormattedItems(order.order_items);
-        formatted?.forEach((it: any) => itemsArr.push({
-          name: it.name, size: formatSizesDisplay(it.sizes), color: it.color || '-', price: it.totalPrice
-        }));
-      }
-      itemsListHtml = itemsArr.map((it, idx) => `
-        <div style="display:flex; align-items:stretch; margin-bottom:6px; border:1px solid #e3e8ef; border-radius:6px; overflow:hidden; font-size:12px;">
-          <div style="width:32px; background:#0b1f33; color:#d4af37; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px;">${idx + 1}</div>
-          <div style="flex:1; padding:7px 10px;">
-            <div style="font-weight:700; color:#0b1f33;">${it.name}</div>
-            <div style="font-size:10px; color:#6b7280; margin-top:2px;">المقاس: ${it.size} · اللون: ${it.color}</div>
-          </div>
-          <div style="padding:7px 12px; background:#fafbfc; display:flex; align-items:center; font-weight:700; color:#0b1f33; border-right:1px dashed #d4af37;">${it.price.toFixed(2)} ج.م</div>
-        </div>
-      `).join('');
-
-      const trackCode = (order as any).tracking_code || `TRK-${(order.order_number || '').toString().padStart(6,'0')}`;
-      // Fake barcode bars
-      const barcode = Array.from({length: 50}, () => {
-        const w = [1,2,3][Math.floor(Math.random()*3)];
-        const bg = Math.random() > 0.4 ? '#0b1f33' : 'transparent';
-        return `<span style="display:inline-block; width:${w}px; height:36px; background:${bg};"></span>`;
-      }).join('');
-
-      return `
-        <div class="invoice" style="page-break-after: always; padding:0; position:relative; font-family:'Cairo','Tajawal',Arial,sans-serif; color:#0b1f33; display:flex; min-height:auto;">
-          <!-- Vertical side ribbon -->
-          <div style="width:42px; background:linear-gradient(180deg,#0b1f33,#1a3a5c); color:#d4af37; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:14px 0;">
-            <div style="font-weight:900; font-size:18px; transform:rotate(180deg); writing-mode:vertical-rl;">SAQR · EXPRESS</div>
-            <div style="font-size:11px; transform:rotate(180deg); writing-mode:vertical-rl; opacity:.8;">${new Date(order.created_at).toLocaleDateString('ar-EG')}</div>
-          </div>
-
-          <!-- Main content -->
-          <div style="flex:1; padding:18px 22px; position:relative;">
-            <!-- Top shipping-label area: FROM / TO -->
-            <div style="display:flex; gap:10px; align-items:stretch;">
-              <div style="flex:1; border:1.5px solid #0b1f33; border-radius:8px; padding:10px 12px; position:relative;">
-                <div style="position:absolute; top:-9px; right:10px; background:#0b1f33; color:#d4af37; padding:1px 8px; font-size:10px; font-weight:700; border-radius:3px;">المرسل</div>
-                <div style="font-weight:900; font-size:16px; margin-top:2px;">🦅 الصقر اكسبريس</div>
-                <div style="font-size:10px; color:#6b7280; margin-top:3px; line-height:1.6;">شحن سريع · توصيل آمن<br/>خدمة عملاء 24/7</div>
-              </div>
-              <div style="flex:1.4; border:1.5px dashed #d4af37; border-radius:8px; padding:10px 12px; position:relative; background:#fffdf5;">
-                <div style="position:absolute; top:-9px; right:10px; background:#d4af37; color:#0b1f33; padding:1px 8px; font-size:10px; font-weight:700; border-radius:3px;">المستلم</div>
-                <div style="font-weight:900; font-size:15px; margin-top:2px;">${order.customers?.name || '-'}</div>
-                <div style="font-size:11px; line-height:1.7; margin-top:3px;">
-                  📞 ${order.customers?.phone || '-'}${(order.customers as any)?.phone2 ? ` · ${(order.customers as any).phone2}` : ''}<br/>
-                  📍 ${order.customers?.governorate || '-'} — ${order.customers?.address || '-'}
-                </div>
-              </div>
-            </div>
-
-            <!-- Barcode + order number bar -->
-            <div style="margin-top:12px; background:#0b1f33; border-radius:8px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; color:#fff;">
-              <div>
-                <div style="font-size:10px; color:#d4af37; letter-spacing:2px;">ORDER · رقم الأوردر</div>
-                <div style="font-size:22px; font-weight:900; color:#fff;">#${order.order_number || order.id.slice(0,8)}</div>
-                <div style="font-size:10px; opacity:.7; margin-top:2px;">${trackCode}</div>
-              </div>
-              <div style="background:#fff; padding:6px 8px; border-radius:4px; line-height:0; max-width:60%; overflow:hidden; white-space:nowrap;">
-                ${barcode}
-              </div>
-            </div>
-
-            <!-- Items list -->
-            <div style="margin-top:12px;">
-              <div style="font-size:11px; font-weight:700; color:#0b1f33; margin-bottom:6px; padding-bottom:4px; border-bottom:2px solid #d4af37; display:inline-block;">المنتجات (${itemsArr.length})</div>
-              ${itemsListHtml}
-            </div>
-
-            ${order.notes ? `<div style="margin-top:10px; background:#fff8e1; padding:8px 12px; border-radius:6px; border-right:3px solid #d4af37; font-size:11px;"><strong>ملاحظات:</strong> ${order.notes}</div>` : ''}
-
-            <!-- Totals row (horizontal strip) -->
-            <div style="margin-top:14px; display:flex; align-items:stretch; border-radius:8px; overflow:hidden; border:1px solid #0b1f33;">
-              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
-                <div style="color:#6b7280;">المنتجات</div>
-                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${totalAmount.toFixed(2)} ج.م</div>
-              </div>
-              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
-                <div style="color:#6b7280;">الشحن</div>
-                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${shippingCost.toFixed(2)} ج.م</div>
-              </div>
-              <div style="flex:1; padding:8px 12px; text-align:center; font-size:11px; border-left:1px solid #e3e8ef;">
-                <div style="color:#6b7280;">الحالة</div>
-                <div style="font-weight:700; color:#0b1f33; margin-top:2px;">${getStatusText(order.status)}</div>
-              </div>
-              <div style="flex:1.4; padding:10px 14px; text-align:center; background:linear-gradient(135deg,#d4af37,#f4d56b); color:#0b1f33;">
-                <div style="font-size:11px;">الإجمالي المستحق</div>
-                <div style="font-size:20px; font-weight:900; margin-top:2px;">${finalAmount.toFixed(2)} ج.م</div>
-              </div>
-            </div>
-
-            <!-- Footer note -->
-            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#6b7280; padding-top:6px; border-top:1px dotted #cbd5e1;">
-              <div>معاينة الطرد قبل الاستلام وعدم استخدامه · في حالة الرفض يتم دفع رسوم شحن للمندوب 65 ج</div>
-              <div style="color:#0b1f33; font-weight:700;">شكراً لاختياركم الصقر اكسبريس</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>الفواتير</title>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            @media print {
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          ${invoicesHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
     printWindow.print();
   };
 
