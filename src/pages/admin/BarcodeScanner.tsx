@@ -104,7 +104,7 @@ const BarcodeScanner = () => {
     const ids = orders.map((o) => o.id);
     const { data } = await supabase
       .from("orders")
-      .select(`*, customers(name,phone,address,governorate), delivery_agents(id,name), governorates(name)`)
+      .select(`*, customers(name,phone,address,governorate), delivery_agents(id,name), governorates(name), order_items(id, product_id, quantity, price, size, color, product_details, products(name))`)
       .in("id", ids);
     if (data) setOrders(data);
   };

@@ -22,6 +22,8 @@ import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useDailyCashbox, getDailyCashboxName } from "@/hooks/useDailyCashbox";
+import { useTheme } from "@/contexts/ThemeContext";
+import { printInvoices as printUnifiedInvoices } from "@/lib/invoiceTemplate";
 
 const statusLabels: Record<string, string> = {
   shipped: "تم الشحن",
@@ -43,6 +45,7 @@ const AgentOrders = () => {
   const { logAction } = useActivityLogger();
   const { currentUser, canEdit } = useAdminAuth();
   const canEditAgentOrders = canEdit('agent_orders');
+  const { invoiceName } = useTheme();
   const summaryRef = useRef<HTMLDivElement>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -492,10 +495,23 @@ const AgentOrders = () => {
 
     // حساب عدد القطع لكل منتج (من جميع أوردرات اليوم)
     const productQuantities: Record<string, number> = {};
+    const getItemName = (item: any): string => {
+      if (item?.products?.name) return item.products.name;
+      const d = item?.product_details;
+      if (d) {
+        try {
+          const obj = typeof d === "string" ? JSON.parse(d) : d;
+          if (obj?.name) return obj.name;
+          if (obj?.product_name) return obj.product_name;
+        } catch { /* fallthrough */ }
+        if (typeof d === "string" && d.trim()) return d.trim();
+      }
+      return "منتج غير معروف";
+    };
     ordersToUse.forEach((order: any) => {
       const orderItems = order.order_items || [];
       orderItems.forEach((item: any) => {
-        const productName = item.products?.name || "منتج غير معروف";
+        const productName = getItemName(item);
         const qty = item.quantity || 0;
         productQuantities[productName] = (productQuantities[productName] || 0) + qty;
       });
@@ -1423,92 +1439,16 @@ const AgentOrders = () => {
       toast.error("يرجى اختيار أوردرات للطباعة");
       return;
     }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const selectedOrdersData = orders?.filter(o => selectedOrders.includes(o.id));
-    
-    const invoicesHtml = selectedOrdersData?.map(order => {
-      const orderItems = order.order_items?.map((item: any) => `
-        <tr>
-          <td style="border: 1px solid #ddd; padding: 8px;">${item.products?.name}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${parseFloat(item.price.toString()).toFixed(2)} ج.م</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)} ج.م</td>
-        </tr>
-      `).join('');
-
-      const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
-      const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
-      const totalAmount = parseFloat(order.total_amount.toString());
-      const discount = parseFloat(order.discount?.toString() || "0");
-      const totalPrice = totalAmount + customerShipping;
-      const netAmount = totalPrice - agentShipping;
-
-      return `
-        <div style="page-break-after: always; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <img src="/images/magou-logo.jpg" alt="Magou Fashion Logo" style="max-width: 150px; height: auto;" />
-          </div>
-          <h1 style="text-align: center; margin: 10px 0;">فاتورة</h1>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <div style="margin: 20px 0; line-height: 1.8;">
-            <p><strong>رقم الأوردر:</strong> #${order.order_number || order.id.slice(0, 8)}</p>
-            <p><strong>التاريخ:</strong> ${(order as any).assigned_at ? new Date((order as any).assigned_at).toLocaleDateString('ar-EG') : '-'}</p>
-            <p><strong>اسم العميل:</strong> ${order.customers?.name}</p>
-            <p><strong>الهاتف:</strong> ${order.customers?.phone}</p>
-            <p><strong>الهاتف 2:</strong> ${(order.customers as any)?.phone2 || '-'}</p>
-            <p><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</p>
-            <p><strong>العنوان بالتفصيل:</strong> ${order.customers?.address}</p>
-            ${order.notes ? `<p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-          </div>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-            <thead>
-              <tr>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">المنتج</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">الكمية</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">السعر</th>
-                <th style="border: 1px solid #ddd; padding: 12px; background-color: #f2f2f2;">الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems}
-            </tbody>
-          </table>
-          <hr style="border: 1px solid #ddd; margin: 20px 0;"/>
-          <div style="margin-top: 20px; line-height: 2;">
-            <p><strong>سعر المنتجات:</strong> ${totalAmount.toFixed(2)} ج.م</p>
-            <p><strong>شحن العميل:</strong> ${customerShipping.toFixed(2)} ج.م</p>
-            ${discount > 0 ? `<p><strong>خصم:</strong> ${discount.toFixed(2)} ج.م</p>` : ''}
-            <p style="font-size: 18px;"><strong>الإجمالي:</strong> ${totalPrice.toFixed(2)} ج.م</p>
-            <p><strong>شحن المندوب:</strong> ${agentShipping.toFixed(2)} ج.م</p>
-            <p style="font-size: 20px; font-weight: bold; color: green;">المطلوب من المندوب: ${netAmount.toFixed(2)} ج.م</p>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>أوردرات المندوب</title>
-          <style>
-            body { font-family: Arial, sans-serif; }
-            @media print {
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          ${invoicesHtml}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    const selectedOrdersData = (orders || []).filter(o => selectedOrders.includes(o.id));
+    if (!selectedOrdersData.length) return;
+    printUnifiedInvoices(selectedOrdersData as any, {
+      brandName: invoiceName,
+      watermarkText: invoiceName,
+      logoUrl: null,
+      copies: 1,
+    });
   };
+
 
   const handleBulkStatusUpdate = async () => {
     if (selectedOrders.length === 0 || !bulkStatus) {
@@ -1589,88 +1529,14 @@ const AgentOrders = () => {
   };
 
   const handlePrintOrder = (order: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const orderItems = order.order_items?.map((item: any) => `
-      <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;">${item.products?.name}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${item.quantity}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${parseFloat(item.price.toString()).toFixed(2)} ج.م</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${(parseFloat(item.price.toString()) * item.quantity).toFixed(2)} ج.م</td>
-      </tr>
-    `).join('');
-
-    const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
-    const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
-    const totalAmount = parseFloat(order.total_amount.toString());
-    const discount = parseFloat(order.discount?.toString() || "0");
-    const totalPrice = totalAmount + customerShipping;
-    const netAmount = totalPrice - agentShipping;
-
-    printWindow.document.write(`
-      <html dir="rtl">
-        <head>
-          <title>فاتورة - ${order.order_number || order.id.slice(0, 8)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .logo { text-align: center; margin-bottom: 20px; }
-            .logo img { max-width: 150px; height: auto; }
-            h1 { text-align: center; margin: 10px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-            th { background-color: #f2f2f2; }
-            .info { margin: 20px 0; line-height: 1.8; }
-            .total { font-size: 16px; margin-top: 20px; line-height: 2; }
-            .final-total { font-size: 20px; font-weight: bold; color: green; }
-            hr { border: 1px solid #ddd; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="logo">
-            <img src="/images/magou-logo.jpg" alt="Magou Fashion Logo" />
-          </div>
-          <h1>فاتورة</h1>
-          <hr/>
-          <div class="info">
-            <p><strong>رقم الأوردر:</strong> #${order.order_number || order.id.slice(0, 8)}</p>
-            <p><strong>التاريخ:</strong> ${(order as any).assigned_at ? new Date((order as any).assigned_at).toLocaleDateString('ar-EG') : '-'}</p>
-            <p><strong>اسم العميل:</strong> ${order.customers?.name}</p>
-            <p><strong>الهاتف:</strong> ${order.customers?.phone}</p>
-            <p><strong>الهاتف 2:</strong> ${(order.customers as any)?.phone2 || '-'}</p>
-            <p><strong>المحافظة:</strong> ${order.customers?.governorate || '-'}</p>
-            <p><strong>العنوان بالتفصيل:</strong> ${order.customers?.address}</p>
-            ${order.notes ? `<p><strong>ملاحظات:</strong> ${order.notes}</p>` : ''}
-          </div>
-          <hr/>
-          <table>
-            <thead>
-              <tr>
-                <th>المنتج</th>
-                <th>الكمية</th>
-                <th>السعر</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems}
-            </tbody>
-          </table>
-          <hr/>
-          <div class="total">
-            <p><strong>سعر المنتجات:</strong> ${totalAmount.toFixed(2)} ج.م</p>
-            <p><strong>شحن العميل:</strong> ${customerShipping.toFixed(2)} ج.م</p>
-            ${discount > 0 ? `<p><strong>خصم:</strong> ${discount.toFixed(2)} ج.م</p>` : ''}
-            <p style="font-size: 18px;"><strong>الإجمالي:</strong> ${totalPrice.toFixed(2)} ج.م</p>
-            <p><strong>شحن المندوب:</strong> ${agentShipping.toFixed(2)} ج.م</p>
-            <p class="final-total">المطلوب من المندوب: ${netAmount.toFixed(2)} ج.م</p>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+    printUnifiedInvoices([order] as any, {
+      brandName: invoiceName,
+      watermarkText: invoiceName,
+      logoUrl: null,
+      copies: 1,
+    });
   };
+
 
   // Print summary function
   const handlePrintSummary = () => {
@@ -1967,17 +1833,26 @@ const AgentOrders = () => {
                                 {(() => {
                                   const items = order.order_items || [];
                                   if (items.length > 0) {
-                                    return items.map((item: any, idx: number) => (
+                                    return items.map((item: any, idx: number) => {
+                                      let nm = item.products?.name as string | undefined;
+                                      if (!nm && item.product_details) {
+                                        try {
+                                          const obj = typeof item.product_details === "string" ? JSON.parse(item.product_details) : item.product_details;
+                                          nm = obj?.name || obj?.product_name;
+                                        } catch { /* noop */ }
+                                      }
+                                      return (
                                       <div key={idx} className="flex items-center justify-between text-sm gap-2">
                                         <span className="truncate flex-1">
-                                          {item.products?.name || "منتج محذوف"}
+                                          {nm || "منتج"}
                                           {item.color ? <span className="text-xs text-muted-foreground"> · {item.color}</span> : null}
                                         </span>
                                         <Badge variant="outline" className="shrink-0">
                                           {item.quantity}
                                         </Badge>
                                       </div>
-                                    ));
+                                      );
+                                    });
                                   }
                                   // Fallback to order_details JSON for store orders
                                   if (order.order_details) {

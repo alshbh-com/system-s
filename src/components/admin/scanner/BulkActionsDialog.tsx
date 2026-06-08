@@ -42,12 +42,59 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
   const applyStatus = async () => {
     if (!status) return toast.error("اختر الحالة");
     setBusy(true);
-    const { error } = await supabase.from("orders").update({ status: status as any }).in("id", ids);
-    setBusy(false);
-    if (error) return toast.error("خطأ: " + error.message);
-    await logBulk("status_change", status);
-    toast.success(`تم تغيير حالة ${ids.length} أوردر`);
-    onActionDone();
+    try {
+      // Auto-create return records when scanning to a return status, so the
+      // agent summary picks it up (mirrors AgentOrders.updateStatusMutation).
+      if (status === "returned" || status === "return_no_shipping") {
+        for (const o of orders) {
+          const returnItems = (o.order_items || []).map((item: any) => {
+            let productName = item?.products?.name;
+            if (!productName && item?.product_details) {
+              try {
+                const d = typeof item.product_details === "string" ? JSON.parse(item.product_details) : item.product_details;
+                productName = d?.name || d?.product_name;
+              } catch { /* noop */ }
+            }
+            const qty = parseFloat((item?.quantity ?? 0).toString()) || 0;
+            const price = parseFloat((item?.price ?? 0).toString()) || 0;
+            return { product_id: item?.product_id ?? null, product_name: productName || "منتج غير معروف", quantity: qty, price };
+          });
+          const returnAmount = returnItems.reduce((s: number, it: any) => s + it.quantity * it.price, 0);
+          const shippingDeduction = parseFloat((o.agent_shipping_cost ?? 0).toString()) || 0;
+
+          const { data: existing } = await supabase.from("returns").select("id").eq("order_id", o.id).maybeSingle();
+          if (existing?.id) {
+            await supabase.from("returns").update({
+              customer_id: o.customer_id,
+              delivery_agent_id: o.delivery_agent_id,
+              return_amount: returnAmount,
+              shipping_deduction: shippingDeduction,
+              returned_items: returnItems as any,
+            }).eq("id", existing.id);
+          } else {
+            await supabase.from("returns").insert({
+              order_id: o.id,
+              customer_id: o.customer_id,
+              delivery_agent_id: o.delivery_agent_id,
+              return_amount: returnAmount,
+              shipping_deduction: shippingDeduction,
+              returned_items: returnItems as any,
+              notes: "مرتجع عبر الباركود سكانر",
+            });
+          }
+        }
+      }
+
+      const { error } = await supabase.from("orders").update({ status: status as any }).in("id", ids);
+      if (error) throw error;
+      await logBulk("status_change", status);
+      toast.success(`تم تغيير حالة ${ids.length} أوردر`);
+      onActionDone();
+    } catch (e: any) {
+      toast.error("خطأ: " + (e?.message || e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const assignAgent = async () => {

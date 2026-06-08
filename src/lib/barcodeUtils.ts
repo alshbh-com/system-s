@@ -30,10 +30,14 @@ export const generateQrDataUrl = async (value: string, size = 120): Promise<stri
   }
 };
 
-/**
- * Find an order by tracking_code, order_number, or partial id.
- * Accepts inputs like "TRK-000123", "123", or full UUID.
- */
+const ORDER_SELECT = `
+  *,
+  customers (name, phone, address, governorate),
+  delivery_agents (id, name),
+  governorates (name),
+  order_items (id, product_id, quantity, price, size, color, product_details, products (name))
+`;
+
 export const findOrderByCode = async (rawCode: string) => {
   const code = rawCode.trim();
   if (!code) return null;
@@ -41,12 +45,7 @@ export const findOrderByCode = async (rawCode: string) => {
   // 1. tracking_code exact match
   const { data: byTracking } = await supabase
     .from("orders")
-    .select(`
-      *,
-      customers (name, phone, address, governorate),
-      delivery_agents (id, name),
-      governorates (name)
-    `)
+    .select(ORDER_SELECT)
     .eq("tracking_code", code)
     .maybeSingle();
   if (byTracking) return byTracking;
@@ -56,12 +55,7 @@ export const findOrderByCode = async (rawCode: string) => {
   if (numeric) {
     const { data: byNumber } = await supabase
       .from("orders")
-      .select(`
-        *,
-        customers (name, phone, address, governorate),
-        delivery_agents (id, name),
-        governorates (name)
-      `)
+      .select(ORDER_SELECT)
       .eq("order_number", parseInt(numeric))
       .maybeSingle();
     if (byNumber) return byNumber;
@@ -71,12 +65,7 @@ export const findOrderByCode = async (rawCode: string) => {
   if (/^[0-9a-f-]{8,}$/i.test(code)) {
     const { data: byId } = await supabase
       .from("orders")
-      .select(`
-        *,
-        customers (name, phone, address, governorate),
-        delivery_agents (id, name),
-        governorates (name)
-      `)
+      .select(ORDER_SELECT)
       .eq("id", code)
       .maybeSingle();
     if (byId) return byId;
