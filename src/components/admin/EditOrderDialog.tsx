@@ -54,8 +54,8 @@ const EditOrderDialog = ({ order, onSuccess }: Props) => {
     setCustomerPhone(order.customers?.phone || "");
     setCustomerAddress(order.customers?.address || "");
     setGovernorateId(order.governorate_id || "");
-    setShippingCost(parseFloat(order.shipping_cost ?? 0) || 0);
-    setAgentShippingCost(parseFloat(order.agent_shipping_cost ?? 0) || 0);
+    setShippingCost(parseFloat(String(order.shipping_cost ?? 0)) || 0);
+    setAgentShippingCost(parseFloat(String(order.agent_shipping_cost ?? 0)) || 0);
     setNotes(order.notes || "");
 
     // Hydrate items from order_items (preferred) else order_details JSON
