@@ -127,8 +127,13 @@ const Orders = () => {
 
           if (!phone) { failed++; continue; }
 
-          const selectedGov = govName
-            ? governorates?.find(g => normalizeKey(g.name || "") === normalizeKey(govName))
+          const govNorm = govName ? normalizeKey(govName) : "";
+          const selectedGov = govNorm
+            ? (governorates?.find(g => normalizeKey(g.name || "") === govNorm)
+              || governorates?.find(g => {
+                  const gn = normalizeKey(g.name || "");
+                  return gn && (gn.includes(govNorm) || govNorm.includes(gn));
+                }))
             : undefined;
 
           // Find or create customer by phone
