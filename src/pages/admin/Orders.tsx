@@ -22,6 +22,7 @@ import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { printInvoices as printUnifiedInvoices } from "@/lib/invoiceTemplate";
+import EditOrderDialog from "@/components/admin/EditOrderDialog";
 
 const Orders = () => {
   const navigate = useNavigate();
