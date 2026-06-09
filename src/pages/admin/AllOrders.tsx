@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import RescheduleOrderDialog from "@/components/admin/RescheduleOrderDialog";
+import EditOrderDialog from "@/components/admin/EditOrderDialog";
 import * as XLSX from "xlsx";
 
 interface ReturnItem {
@@ -872,6 +873,7 @@ const AllOrders = () => {
                                 </AlertDialogContent>
                               </AlertDialog>
                               <RescheduleOrderDialog order={order} />
+                              <EditOrderDialog order={order} />
                             </div>
                           </TableCell>
                           ) : (

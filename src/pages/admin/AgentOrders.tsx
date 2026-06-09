@@ -429,11 +429,13 @@ const AgentOrders = () => {
     const deliveredOrders = ordersToUse.filter((o) => o.status === "delivered" || o.status === "delivered_with_modification");
 
     // Returns should be derived from `returns` table (orders may be unassigned from agent on status changes)
+    // Returns are anchored to the return row's own created_at, so they stay on
+    // their original day even if a different order is later rescheduled.
     const returnsToUse = (agentReturns || []).filter((r: any) => {
       if (!dateFilter) return true;
-      const assignedAt = r?.orders?.assigned_at;
-      if (!assignedAt) return false;
-      return getDateKey(assignedAt) === dateFilter;
+      const anchor = r?.created_at || r?.orders?.assigned_at;
+      if (!anchor) return false;
+      return getDateKey(anchor) === dateFilter;
     });
 
     const returnedOrderIds = new Set(

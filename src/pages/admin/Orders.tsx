@@ -22,6 +22,7 @@ import { formatOrderItems, formatSizesDisplay } from "@/lib/formatOrderItems";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { printInvoices as printUnifiedInvoices } from "@/lib/invoiceTemplate";
+import EditOrderDialog from "@/components/admin/EditOrderDialog";
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -1119,6 +1120,8 @@ const Orders = () => {
                           </TableCell>
                           {canEditOrders && (
                           <TableCell>
+                            <div className="flex gap-1">
+                              <EditOrderDialog order={order} />
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm">
@@ -1140,6 +1143,7 @@ const Orders = () => {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            </div>
                           </TableCell>
                           )}
                         </TableRow>
