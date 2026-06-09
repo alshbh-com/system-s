@@ -1021,13 +1021,18 @@ const Orders = () => {
                                     {formattedItems.map((item, idx) => (
                                       <div key={idx} className="bg-muted/50 p-2 rounded">
                                         <div className="font-medium">{item.name} × {item.totalQuantity}</div>
-                                        {item.color && (
-                                          <div className="text-muted-foreground mt-1">
-                                            <span className="bg-secondary/50 px-2 py-0.5 rounded">
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {item.sizes && item.sizes.length > 0 && item.sizes.some(s => s.size && s.size !== '-') && (
+                                            <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">
+                                              مقاس: {formatSizesDisplay(item.sizes)}
+                                            </span>
+                                          )}
+                                          {item.color && (
+                                            <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">
                                               لون: {item.color}
                                             </span>
-                                          </div>
-                                        )}
+                                          )}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
@@ -1043,11 +1048,14 @@ const Orders = () => {
                                         {parsed.map((item: any, idx: number) => (
                                           <div key={idx} className="bg-muted/50 p-2 rounded">
                                             <div className="font-medium">{item.name} × {item.quantity}</div>
-                                            {item.color && (
-                                              <div className="text-muted-foreground mt-1">
-                                                <span className="bg-secondary/50 px-2 py-0.5 rounded">لون: {item.color}</span>
-                                              </div>
-                                            )}
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.size && (
+                                                <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">مقاس: {item.size}</span>
+                                              )}
+                                              {item.color && (
+                                                <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">لون: {item.color}</span>
+                                              )}
+                                            </div>
                                           </div>
                                         ))}
                                       </div>
