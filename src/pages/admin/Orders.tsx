@@ -1142,6 +1142,7 @@ const Orders = () => {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            </div>
                           </TableCell>
                           )}
                         </TableRow>
