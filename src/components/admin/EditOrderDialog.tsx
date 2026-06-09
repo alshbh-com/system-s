@@ -273,7 +273,7 @@ const EditOrderDialog = ({ order, onSuccess }: Props) => {
                 </div>
                 <div className="col-span-2 md:col-span-2">
                   <Label className="text-xs">السعر</Label>
-                  <Input type="number" value={it.price} onChange={(e) => updateItem(idx, { price: parseFloat(e.target.value) || 0 })} />
+                  <Input type="number" value={String(it.price)} onChange={(e) => updateItem(idx, { price: parseFloat(e.target.value) || 0 })} />
                 </div>
                 <div className="col-span-12 md:col-span-1">
                   <Button type="button" variant="destructive" size="sm" onClick={() => removeItem(idx)}>
