@@ -100,7 +100,11 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
   const assignAgent = async () => {
     if (!agentId) return toast.error("اختر المندوب");
     setBusy(true);
-    const { error } = await supabase.from("orders").update({ delivery_agent_id: agentId }).in("id", ids);
+    // Set assigned_at = now so agent reports (which key off assigned_at) pick these up immediately
+    const { error } = await supabase
+      .from("orders")
+      .update({ delivery_agent_id: agentId, assigned_at: new Date().toISOString() })
+      .in("id", ids);
     setBusy(false);
     if (error) return toast.error("خطأ: " + error.message);
     await logBulk("assign_agent", agentId);
