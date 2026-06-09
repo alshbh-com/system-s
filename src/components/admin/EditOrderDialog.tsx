@@ -220,9 +220,9 @@ const EditOrderDialog = ({ order, onSuccess }: Props) => {
                   setGovernorateId(v);
                   const g = governorates?.find((x: any) => x.id === v);
                   if (g) {
-                    setShippingCost(parseFloat(g.shipping_cost ?? 0) || 0);
+                    setShippingCost(parseFloat(String(g.shipping_cost ?? 0)) || 0);
                     if (order?.delivery_agent_id) {
-                      setAgentShippingCost(parseFloat(g.agent_shipping_cost ?? 0) || 0);
+                      setAgentShippingCost(parseFloat(String(g.agent_shipping_cost ?? 0)) || 0);
                     }
                   }
                 }}
