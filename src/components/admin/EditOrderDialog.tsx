@@ -80,8 +80,8 @@ const EditOrderDialog = ({ order, onSuccess }: Props) => {
               name: name || "منتج",
               size: it.size || "",
               color: it.color || "",
-              quantity: parseInt(it.quantity ?? 1) || 1,
-              price: parseFloat(it.price ?? 0) || 0,
+              quantity: parseInt(String(it.quantity ?? 1)) || 1,
+              price: parseFloat(String(it.price ?? 0)) || 0,
             };
           })
         );
