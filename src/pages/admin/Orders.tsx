@@ -1119,6 +1119,8 @@ const Orders = () => {
                           </TableCell>
                           {canEditOrders && (
                           <TableCell>
+                            <div className="flex gap-1">
+                              <EditOrderDialog order={order} />
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm">
