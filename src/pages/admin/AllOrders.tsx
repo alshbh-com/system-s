@@ -872,6 +872,7 @@ const AllOrders = () => {
                                 </AlertDialogContent>
                               </AlertDialog>
                               <RescheduleOrderDialog order={order} />
+                              <EditOrderDialog order={order} />
                             </div>
                           </TableCell>
                           ) : (
