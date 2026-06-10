@@ -368,7 +368,12 @@ const AgentOrders = () => {
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
-      // Order-related movements should follow assignment day only
+      // Returns must stay on their own day even if the related order is rescheduled later.
+      if (p.payment_type === "return") {
+        return (p as any).payment_date || getDateKey(p.created_at || "");
+      }
+
+      // Order-related movements (owed/delivered/modification) follow assignment day.
       if (p.order_id) {
         return orderAssignedDateById.get(p.order_id) || null;
       }
