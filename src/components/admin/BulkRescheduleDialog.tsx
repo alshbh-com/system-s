@@ -82,7 +82,8 @@ const BulkRescheduleDialog = ({ orders, onSuccess }: BulkRescheduleDialogProps) 
         const { error: paymentsError } = await supabase
           .from("agent_payments")
           .update({ payment_date: newDate })
-          .eq("order_id", order.id);
+          .eq("order_id", order.id)
+          .neq("payment_type", "return");
         if (paymentsError) throw paymentsError;
       }
       return { count: orders.length, newDate };

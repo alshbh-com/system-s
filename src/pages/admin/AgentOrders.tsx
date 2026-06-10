@@ -368,7 +368,12 @@ const AgentOrders = () => {
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
-      // Order-related movements should follow assignment day only
+      // Returns must stay on their own day even if the related order is rescheduled later.
+      if (p.payment_type === "return") {
+        return (p as any).payment_date || getDateKey(p.created_at || "");
+      }
+
+      // Order-related movements (owed/delivered/modification) follow assignment day.
       if (p.order_id) {
         return orderAssignedDateById.get(p.order_id) || null;
       }
@@ -1834,26 +1839,31 @@ const AgentOrders = () => {
                               <div className="space-y-1">
                                 {(() => {
                                   const items = order.order_items || [];
+                                  const renderRow = (nm: string, size: any, color: any, qty: any, idx: number) => (
+                                    <div key={idx} className="text-sm border-b last:border-b-0 py-1">
+                                      <div className="font-medium truncate">{nm || "منتج"} × {qty || 1}</div>
+                                      {(size || color) && (
+                                        <div className="text-xs text-muted-foreground flex flex-wrap gap-1 mt-0.5">
+                                          {size && <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded">مقاس: {size}</span>}
+                                          {color && <span className="bg-secondary/60 px-1.5 py-0.5 rounded">لون: {color}</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
                                   if (items.length > 0) {
                                     return items.map((item: any, idx: number) => {
                                       let nm = item.products?.name as string | undefined;
-                                      if (!nm && item.product_details) {
+                                      let size = item.size;
+                                      let color = item.color;
+                                      if ((!nm || !size || !color) && item.product_details) {
                                         try {
                                           const obj = typeof item.product_details === "string" ? JSON.parse(item.product_details) : item.product_details;
-                                          nm = obj?.name || obj?.product_name;
+                                          nm = nm || obj?.name || obj?.product_name;
+                                          size = size || obj?.size;
+                                          color = color || obj?.color;
                                         } catch { /* noop */ }
                                       }
-                                      return (
-                                      <div key={idx} className="flex items-center justify-between text-sm gap-2">
-                                        <span className="truncate flex-1">
-                                          {nm || "منتج"}
-                                          {item.color ? <span className="text-xs text-muted-foreground"> · {item.color}</span> : null}
-                                        </span>
-                                        <Badge variant="outline" className="shrink-0">
-                                          {item.quantity}
-                                        </Badge>
-                                      </div>
-                                      );
+                                      return renderRow(nm || "منتج", size, color, item.quantity, idx);
                                     });
                                   }
                                   // Fallback to order_details JSON for store orders
@@ -1861,15 +1871,7 @@ const AgentOrders = () => {
                                     try {
                                       const parsed = JSON.parse(order.order_details);
                                       if (Array.isArray(parsed)) {
-                                        return parsed.map((it: any, idx: number) => (
-                                          <div key={idx} className="flex items-center justify-between text-sm gap-2">
-                                            <span className="truncate flex-1">
-                                              {it.name || "منتج"}
-                                              {it.color ? <span className="text-xs text-muted-foreground"> · {it.color}</span> : null}
-                                            </span>
-                                            <Badge variant="outline" className="shrink-0">{it.quantity || 1}</Badge>
-                                          </div>
-                                        ));
+                                        return parsed.map((it: any, idx: number) => renderRow(it.name, it.size, it.color, it.quantity, idx));
                                       }
                                     } catch {}
                                   }
