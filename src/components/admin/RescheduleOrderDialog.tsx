@@ -88,11 +88,13 @@ const RescheduleOrderDialog = ({ order, onSuccess }: RescheduleOrderDialogProps)
 
       if (orderError) throw orderError;
 
-      // 2. Update all related agent_payments to the new date
+      // 2. Update related agent_payments to the new date — EXCLUDE returns so
+      // المرتجعات تبقى على يومها الأصلي ولا تتنقل مع نزول الأوردر.
       const { error: paymentsError } = await supabase
         .from("agent_payments")
         .update({ payment_date: newDate })
-        .eq("order_id", order.id);
+        .eq("order_id", order.id)
+        .neq("payment_type", "return");
 
       if (paymentsError) throw paymentsError;
 
