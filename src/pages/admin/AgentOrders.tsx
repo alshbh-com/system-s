@@ -625,6 +625,7 @@ const AgentOrders = () => {
       productQuantitiesArray,
       totalProductQuantity,
       returnedProductQuantitiesArray,
+      returnedDetailsArray,
       totalReturnedItems,
     };
   };
