@@ -368,8 +368,12 @@ const AgentOrders = () => {
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
-      // Returns must stay on their own day even if the related order is rescheduled later.
+      // Returns must be anchored to the ORIGINAL order's assigned day,
+      // so a return created today on an old order shows under that old day.
       if (p.payment_type === "return") {
+        if (p.order_id && orderAssignedDateById.has(p.order_id)) {
+          return orderAssignedDateById.get(p.order_id) || null;
+        }
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
@@ -436,9 +440,11 @@ const AgentOrders = () => {
     // Returns should be derived from `returns` table (orders may be unassigned from agent on status changes)
     // Returns are anchored to the return row's own created_at, so they stay on
     // their original day even if a different order is later rescheduled.
+    // Returns are anchored to the related order's assigned_at day so a
+    // return created today on an order from day 9 stays under day 9.
     const returnsToUse = (agentReturns || []).filter((r: any) => {
       if (!dateFilter) return true;
-      const anchor = r?.created_at || r?.orders?.assigned_at;
+      const anchor = r?.orders?.assigned_at || r?.created_at;
       if (!anchor) return false;
       return getDateKey(anchor) === dateFilter;
     });
@@ -563,6 +569,32 @@ const AgentOrders = () => {
       .map(([name, quantity]) => ({ name, quantity }))
       .sort((a, b) => b.quantity - a.quantity);
 
+    // Per-return breakdown for display (price/shipping/qty per return)
+    const orderInfoById = new Map<string, any>();
+    allAgentOrders.forEach((o: any) => orderInfoById.set(o.id, o));
+    const returnedDetailsArray = (returnsToUse || []).map((ret: any) => {
+      let items: any[] = [];
+      if (typeof ret?.returned_items === 'string') {
+        try { items = JSON.parse(ret.returned_items); } catch { items = []; }
+      } else if (Array.isArray(ret?.returned_items)) {
+        items = ret.returned_items;
+      }
+      const normItems = items.map((it: any) => ({
+        name: it?.product_name || it?.name || "منتج غير معروف",
+        quantity: parseFloat((it?.quantity ?? it?.returned_quantity ?? 0).toString()) || 0,
+        price: parseFloat((it?.price ?? 0).toString()) || 0,
+      }));
+      const order = orderInfoById.get(ret.order_id);
+      return {
+        id: ret.id,
+        orderNumber: order?.order_number ?? null,
+        customerName: order?.customers?.name ?? "",
+        items: normItems,
+        shippingDeduction: parseFloat((ret?.shipping_deduction ?? 0).toString()) || 0,
+        returnAmount: parseFloat((ret?.return_amount ?? 0).toString()) || 0,
+      };
+    });
+
     return {
       totalOwed,
       totalPaid,
@@ -593,6 +625,7 @@ const AgentOrders = () => {
       productQuantitiesArray,
       totalProductQuantity,
       returnedProductQuantitiesArray,
+      returnedDetailsArray,
       totalReturnedItems,
     };
   };
@@ -2791,18 +2824,36 @@ const AgentOrders = () => {
                           {summaryData.totalReturnedItems} قطعة
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {summaryData.returnedProductQuantitiesArray.map((product, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-orange-100 dark:border-orange-700"
+                      <div className="space-y-2">
+                        {summaryData.returnedDetailsArray.map((ret: any) => (
+                          <div
+                            key={ret.id}
+                            className="p-3 bg-white dark:bg-gray-800 rounded border border-orange-100 dark:border-orange-700"
                           >
-                            <span className="text-sm font-medium truncate flex-1 ml-2">
-                              {product.name}
-                            </span>
-                            <Badge className="bg-orange-600 text-white">
-                              {product.quantity}
-                            </Badge>
+                            <div className="flex items-center justify-between mb-2 text-sm font-semibold text-orange-700 dark:text-orange-300">
+                              <span>
+                                {ret.orderNumber ? `#${ret.orderNumber}` : "أوردر"}
+                                {ret.customerName ? ` — ${ret.customerName}` : ""}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                شحن مخصوم: <span className="font-bold text-red-600">{ret.shippingDeduction.toFixed(2)} ج.م</span>
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {ret.items.map((it: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-sm border-b last:border-0 py-1">
+                                  <span className="flex-1 truncate ml-2">{it.name}</span>
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <span>السعر: <span className="font-bold">{it.price.toFixed(2)}</span></span>
+                                    <Badge className="bg-orange-600 text-white">× {it.quantity}</Badge>
+                                    <span>الإجمالي: <span className="font-bold">{(it.price * it.quantity).toFixed(2)}</span></span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-xs text-right text-orange-700 dark:text-orange-300">
+                              إجمالي المرتجع: <span className="font-bold">{ret.returnAmount.toFixed(2)} ج.م</span>
+                            </div>
                           </div>
                         ))}
                       </div>
