@@ -760,9 +760,10 @@ const AllOrders = () => {
                                         {parsed.map((item: any, idx: number) => (
                                           <div key={idx} className="bg-muted/50 p-2 rounded">
                                             <div className="font-medium">{item.name} × {item.quantity}</div>
-                                            {item.color && (
+                                            {(item.size || item.color) && (
                                               <div className="text-muted-foreground mt-1 flex flex-wrap gap-2">
-                                                <span className="bg-secondary/50 px-2 py-0.5 rounded">لون: {item.color}</span>
+                                                {item.size && <span className="bg-primary/10 px-2 py-0.5 rounded text-primary">مقاس: {item.size}</span>}
+                                                {item.color && <span className="bg-secondary/50 px-2 py-0.5 rounded">لون: {item.color}</span>}
                                               </div>
                                             )}
                                           </div>

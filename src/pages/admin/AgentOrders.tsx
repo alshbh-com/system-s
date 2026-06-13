@@ -1871,7 +1871,7 @@ const AgentOrders = () => {
                                     try {
                                       const parsed = JSON.parse(order.order_details);
                                       if (Array.isArray(parsed)) {
-                                        return parsed.map((it: any, idx: number) => renderRow(it.name, undefined, it.color, it.quantity, idx));
+                                        return parsed.map((it: any, idx: number) => renderRow(it.name, it.size, it.color, it.quantity, idx));
                                       }
                                     } catch {}
                                   }

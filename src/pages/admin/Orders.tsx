@@ -1054,11 +1054,14 @@ const Orders = () => {
                                         {parsed.map((item: any, idx: number) => (
                                           <div key={idx} className="bg-muted/50 p-2 rounded">
                                             <div className="font-medium">{item.name} × {item.quantity}</div>
-                                            {item.color && (
-                                              <div className="flex flex-wrap gap-1 mt-1">
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {item.size && (
+                                                <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">مقاس: {item.size}</span>
+                                              )}
+                                              {item.color && (
                                                 <span className="bg-secondary/50 px-2 py-0.5 rounded text-muted-foreground">لون: {item.color}</span>
-                                              </div>
-                                            )}
+                                              )}
+                                            </div>
                                           </div>
                                         ))}
                                       </div>
