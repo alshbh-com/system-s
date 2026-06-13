@@ -440,9 +440,11 @@ const AgentOrders = () => {
     // Returns should be derived from `returns` table (orders may be unassigned from agent on status changes)
     // Returns are anchored to the return row's own created_at, so they stay on
     // their original day even if a different order is later rescheduled.
+    // Returns are anchored to the related order's assigned_at day so a
+    // return created today on an order from day 9 stays under day 9.
     const returnsToUse = (agentReturns || []).filter((r: any) => {
       if (!dateFilter) return true;
-      const anchor = r?.created_at || r?.orders?.assigned_at;
+      const anchor = r?.orders?.assigned_at || r?.created_at;
       if (!anchor) return false;
       return getDateKey(anchor) === dateFilter;
     });
