@@ -569,6 +569,32 @@ const AgentOrders = () => {
       .map(([name, quantity]) => ({ name, quantity }))
       .sort((a, b) => b.quantity - a.quantity);
 
+    // Per-return breakdown for display (price/shipping/qty per return)
+    const orderInfoById = new Map<string, any>();
+    allAgentOrders.forEach((o: any) => orderInfoById.set(o.id, o));
+    const returnedDetailsArray = (returnsToUse || []).map((ret: any) => {
+      let items: any[] = [];
+      if (typeof ret?.returned_items === 'string') {
+        try { items = JSON.parse(ret.returned_items); } catch { items = []; }
+      } else if (Array.isArray(ret?.returned_items)) {
+        items = ret.returned_items;
+      }
+      const normItems = items.map((it: any) => ({
+        name: it?.product_name || it?.name || "منتج غير معروف",
+        quantity: parseFloat((it?.quantity ?? it?.returned_quantity ?? 0).toString()) || 0,
+        price: parseFloat((it?.price ?? 0).toString()) || 0,
+      }));
+      const order = orderInfoById.get(ret.order_id);
+      return {
+        id: ret.id,
+        orderNumber: order?.order_number ?? null,
+        customerName: order?.customers?.name ?? "",
+        items: normItems,
+        shippingDeduction: parseFloat((ret?.shipping_deduction ?? 0).toString()) || 0,
+        returnAmount: parseFloat((ret?.return_amount ?? 0).toString()) || 0,
+      };
+    });
+
     return {
       totalOwed,
       totalPaid,
