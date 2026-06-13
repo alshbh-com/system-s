@@ -368,8 +368,12 @@ const AgentOrders = () => {
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
-      // Returns must stay on their own day even if the related order is rescheduled later.
+      // Returns must be anchored to the ORIGINAL order's assigned day,
+      // so a return created today on an old order shows under that old day.
       if (p.payment_type === "return") {
+        if (p.order_id && orderAssignedDateById.has(p.order_id)) {
+          return orderAssignedDateById.get(p.order_id) || null;
+        }
         return (p as any).payment_date || getDateKey(p.created_at || "");
       }
 
