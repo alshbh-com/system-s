@@ -2824,18 +2824,36 @@ const AgentOrders = () => {
                           {summaryData.totalReturnedItems} قطعة
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {summaryData.returnedProductQuantitiesArray.map((product, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-orange-100 dark:border-orange-700"
+                      <div className="space-y-2">
+                        {summaryData.returnedDetailsArray.map((ret: any) => (
+                          <div
+                            key={ret.id}
+                            className="p-3 bg-white dark:bg-gray-800 rounded border border-orange-100 dark:border-orange-700"
                           >
-                            <span className="text-sm font-medium truncate flex-1 ml-2">
-                              {product.name}
-                            </span>
-                            <Badge className="bg-orange-600 text-white">
-                              {product.quantity}
-                            </Badge>
+                            <div className="flex items-center justify-between mb-2 text-sm font-semibold text-orange-700 dark:text-orange-300">
+                              <span>
+                                {ret.orderNumber ? `#${ret.orderNumber}` : "أوردر"}
+                                {ret.customerName ? ` — ${ret.customerName}` : ""}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                شحن مخصوم: <span className="font-bold text-red-600">{ret.shippingDeduction.toFixed(2)} ج.م</span>
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {ret.items.map((it: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-sm border-b last:border-0 py-1">
+                                  <span className="flex-1 truncate ml-2">{it.name}</span>
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <span>السعر: <span className="font-bold">{it.price.toFixed(2)}</span></span>
+                                    <Badge className="bg-orange-600 text-white">× {it.quantity}</Badge>
+                                    <span>الإجمالي: <span className="font-bold">{(it.price * it.quantity).toFixed(2)}</span></span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-2 text-xs text-right text-orange-700 dark:text-orange-300">
+                              إجمالي المرتجع: <span className="font-bold">{ret.returnAmount.toFixed(2)} ج.م</span>
+                            </div>
                           </div>
                         ))}
                       </div>
