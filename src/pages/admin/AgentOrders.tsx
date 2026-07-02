@@ -1515,6 +1515,34 @@ const AgentOrders = () => {
     }
   };
 
+  const handleBulkShippingUpdate = async () => {
+    if (selectedOrders.length === 0) {
+      toast.error("الرجاء تحديد أوردرات");
+      return;
+    }
+    const val = parseFloat(bulkShippingValue);
+    if (isNaN(val) || val < 0) {
+      toast.error("أدخل قيمة شحن صحيحة");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ agent_shipping_cost: val })
+        .in("id", selectedOrders);
+      if (error) throw error;
+      toast.success(`تم تعديل شحن ${selectedOrders.length} أوردر`);
+      setBulkShippingDialogOpen(false);
+      setBulkShippingValue("");
+      setSelectedOrders([]);
+      queryClient.invalidateQueries({ queryKey: ["agent-orders", selectedAgentId] });
+      queryClient.invalidateQueries({ queryKey: ["all-agent-orders", selectedAgentId] });
+    } catch (e: any) {
+      toast.error("خطأ: " + (e?.message || e));
+    }
+  };
+
+
   const handleReturnQuantityChange = (index: number, value: number) => {
     const newItems = [...returnData.returned_items];
     newItems[index].returned_quantity = Math.min(value, newItems[index].total_quantity);
