@@ -2978,6 +2978,39 @@ const AgentOrders = () => {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={bulkShippingDialogOpen} onOpenChange={setBulkShippingDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تعديل شحن المندوب للأوردرات المحددة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                سيتم تطبيق نفس قيمة الشحن على {selectedOrders.length} أوردر
+              </p>
+              <div>
+                <Label>شحن المندوب (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={bulkShippingValue}
+                  onChange={(e) => setBulkShippingValue(e.target.value)}
+                  placeholder="مثال: 40"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBulkShippingDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button onClick={handleBulkShippingUpdate}>
+                تطبيق
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+
         {/* Return Dialog */}
         <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
