@@ -59,6 +59,8 @@ const AgentOrders = () => {
   const [pendingReturnOrder, setPendingReturnOrder] = useState<any>(null);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkShippingDialogOpen, setBulkShippingDialogOpen] = useState(false);
+  const [bulkShippingValue, setBulkShippingValue] = useState<string>("");
   const [selectedOrderForReturn, setSelectedOrderForReturn] = useState<any>(null);
   const [returnData, setReturnData] = useState({
     returned_items: [] as any[],
