@@ -25,6 +25,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
   const { currentUser } = useAdminAuth();
   const [status, setStatus] = useState<string>("");
   const [agentId, setAgentId] = useState<string>("");
+  const [shippingValue, setShippingValue] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   const ids = orders.map((o) => o.id);
