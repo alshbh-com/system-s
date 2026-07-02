@@ -245,6 +245,24 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
             </div>
           </div>
 
+          {/* تعديل شحن المندوب */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="flex items-center gap-2 font-bold"><DollarSign className="h-4 w-4" /> تعديل شحن المندوب</Label>
+            <p className="text-xs text-muted-foreground">يتم تطبيق نفس القيمة على كل الأوردرات الممسوحة</p>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={shippingValue}
+                onChange={(e) => setShippingValue(e.target.value)}
+                placeholder="قيمة الشحن (ج.م)"
+              />
+              <Button onClick={applyShipping} disabled={busy || !shippingValue}>تطبيق</Button>
+            </div>
+          </div>
+
+
           {/* الطباعة والتصدير */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <Button variant="outline" onClick={printInvoices}><Printer className="h-4 w-4 ml-1" /> فواتير</Button>
