@@ -124,6 +124,18 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
     onActionDone();
   };
 
+  const applyShipping = async () => {
+    const val = parseFloat(shippingValue);
+    if (isNaN(val) || val < 0) return toast.error("أدخل قيمة شحن صحيحة");
+    setBusy(true);
+    const { error } = await supabase.from("orders").update({ agent_shipping_cost: val }).in("id", ids);
+    setBusy(false);
+    if (error) return toast.error("خطأ: " + error.message);
+    await logBulk("shipping_update", String(val));
+    toast.success(`تم تعديل شحن المندوب لـ ${ids.length} أوردر`);
+    onActionDone();
+  };
+
   const exportExcel = () => {
     const data = orders.map((o) => ({
       "رقم الأوردر": o.order_number || o.id.slice(0, 8),
