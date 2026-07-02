@@ -1835,6 +1835,15 @@ const AgentOrders = () => {
                         تغيير الحالة للمحدد
                       </Button>
                       )}
+                      {canEditAgentOrders && (
+                      <Button
+                        onClick={() => setBulkShippingDialogOpen(true)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        تعديل شحن المندوب
+                      </Button>
+                      )}
                     </div>
                   )}
                 </>
