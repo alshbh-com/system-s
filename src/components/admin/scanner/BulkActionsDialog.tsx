@@ -3,11 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { STATUS_OPTIONS } from "@/lib/barcodeUtils";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { Truck, UserMinus, Printer, FileSpreadsheet, FileText, RefreshCw, Tag } from "lucide-react";
+import { Truck, UserMinus, Printer, FileSpreadsheet, FileText, RefreshCw, Tag, DollarSign } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { generateBarcodeDataUrl } from "@/lib/barcodeUtils";
@@ -24,6 +25,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
   const { currentUser } = useAdminAuth();
   const [status, setStatus] = useState<string>("");
   const [agentId, setAgentId] = useState<string>("");
+  const [shippingValue, setShippingValue] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   const ids = orders.map((o) => o.id);
@@ -119,6 +121,18 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
     if (error) return toast.error("خطأ: " + error.message);
     await logBulk("unassign_agent");
     toast.success("تم إلغاء التعيين");
+    onActionDone();
+  };
+
+  const applyShipping = async () => {
+    const val = parseFloat(shippingValue);
+    if (isNaN(val) || val < 0) return toast.error("أدخل قيمة شحن صحيحة");
+    setBusy(true);
+    const { error } = await supabase.from("orders").update({ agent_shipping_cost: val }).in("id", ids);
+    setBusy(false);
+    if (error) return toast.error("خطأ: " + error.message);
+    await logBulk("shipping_update", String(val));
+    toast.success(`تم تعديل شحن المندوب لـ ${ids.length} أوردر`);
     onActionDone();
   };
 
@@ -230,6 +244,24 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
               </Button>
             </div>
           </div>
+
+          {/* تعديل شحن المندوب */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <Label className="flex items-center gap-2 font-bold"><DollarSign className="h-4 w-4" /> تعديل شحن المندوب</Label>
+            <p className="text-xs text-muted-foreground">يتم تطبيق نفس القيمة على كل الأوردرات الممسوحة</p>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={shippingValue}
+                onChange={(e) => setShippingValue(e.target.value)}
+                placeholder="قيمة الشحن (ج.م)"
+              />
+              <Button onClick={applyShipping} disabled={busy || !shippingValue}>تطبيق</Button>
+            </div>
+          </div>
+
 
           {/* الطباعة والتصدير */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

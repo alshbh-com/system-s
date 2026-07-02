@@ -59,6 +59,8 @@ const AgentOrders = () => {
   const [pendingReturnOrder, setPendingReturnOrder] = useState<any>(null);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>("");
+  const [bulkShippingDialogOpen, setBulkShippingDialogOpen] = useState(false);
+  const [bulkShippingValue, setBulkShippingValue] = useState<string>("");
   const [selectedOrderForReturn, setSelectedOrderForReturn] = useState<any>(null);
   const [returnData, setReturnData] = useState({
     returned_items: [] as any[],
@@ -1513,6 +1515,34 @@ const AgentOrders = () => {
     }
   };
 
+  const handleBulkShippingUpdate = async () => {
+    if (selectedOrders.length === 0) {
+      toast.error("الرجاء تحديد أوردرات");
+      return;
+    }
+    const val = parseFloat(bulkShippingValue);
+    if (isNaN(val) || val < 0) {
+      toast.error("أدخل قيمة شحن صحيحة");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ agent_shipping_cost: val })
+        .in("id", selectedOrders);
+      if (error) throw error;
+      toast.success(`تم تعديل شحن ${selectedOrders.length} أوردر`);
+      setBulkShippingDialogOpen(false);
+      setBulkShippingValue("");
+      setSelectedOrders([]);
+      queryClient.invalidateQueries({ queryKey: ["agent-orders", selectedAgentId] });
+      queryClient.invalidateQueries({ queryKey: ["all-agent-orders", selectedAgentId] });
+    } catch (e: any) {
+      toast.error("خطأ: " + (e?.message || e));
+    }
+  };
+
+
   const handleReturnQuantityChange = (index: number, value: number) => {
     const newItems = [...returnData.returned_items];
     newItems[index].returned_quantity = Math.min(value, newItems[index].total_quantity);
@@ -1803,6 +1833,15 @@ const AgentOrders = () => {
                         variant="default"
                       >
                         تغيير الحالة للمحدد
+                      </Button>
+                      )}
+                      {canEditAgentOrders && (
+                      <Button
+                        onClick={() => setBulkShippingDialogOpen(true)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        تعديل شحن المندوب
                       </Button>
                       )}
                     </div>
@@ -2938,6 +2977,39 @@ const AgentOrders = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={bulkShippingDialogOpen} onOpenChange={setBulkShippingDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>تعديل شحن المندوب للأوردرات المحددة</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                سيتم تطبيق نفس قيمة الشحن على {selectedOrders.length} أوردر
+              </p>
+              <div>
+                <Label>شحن المندوب (ج.م)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={bulkShippingValue}
+                  onChange={(e) => setBulkShippingValue(e.target.value)}
+                  placeholder="مثال: 40"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBulkShippingDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button onClick={handleBulkShippingUpdate}>
+                تطبيق
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
 
         {/* Return Dialog */}
         <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
