@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { STATUS_OPTIONS } from "@/lib/barcodeUtils";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
-import { Truck, UserMinus, Printer, FileSpreadsheet, FileText, RefreshCw, Tag } from "lucide-react";
+import { Truck, UserMinus, Printer, FileSpreadsheet, FileText, RefreshCw, Tag, DollarSign } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import { generateBarcodeDataUrl } from "@/lib/barcodeUtils";
