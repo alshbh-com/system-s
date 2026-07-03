@@ -275,7 +275,22 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
               </Select>
               <Button onClick={applyStatus} disabled={busy || !status}>تطبيق</Button>
             </div>
+            <div>
+              <Label className="text-xs mb-1 block">
+                تاريخ تسجيل الحركة (اختر يوم النزول الأصلي للمرتجعات)
+              </Label>
+              <Input
+                type="date"
+                value={statusDate}
+                max={getCairoDateKey(new Date())}
+                onChange={(e) => setStatusDate(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                لو التاريخ مختلف عن اليوم، هيتم نقل الأوردرات وتسجيل المرتجع بتاريخ الرحلة الأصلية.
+              </p>
+            </div>
           </div>
+
 
           {/* تعيين مندوب */}
           <div className="border rounded-lg p-4 space-y-3">
