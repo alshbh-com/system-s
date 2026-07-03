@@ -21,9 +21,20 @@ interface Props {
   onActionDone: () => void;
 }
 
+const getCairoDateKey = (value: string | Date) => {
+  const d = typeof value === "string" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+};
+
 const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }: Props) => {
   const { currentUser } = useAdminAuth();
   const [status, setStatus] = useState<string>("");
+  const [statusDate, setStatusDate] = useState<string>(getCairoDateKey(new Date()));
   const [agentId, setAgentId] = useState<string>("");
   const [shippingValue, setShippingValue] = useState<string>("");
   const [busy, setBusy] = useState(false);
