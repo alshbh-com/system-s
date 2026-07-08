@@ -1044,6 +1044,17 @@ const AgentOrders = () => {
 
         // Upsert by order_id — use current agent_shipping_cost as deduction
         const currentAgentShipping = parseFloat((order.agent_shipping_cost ?? 0).toString()) || 0;
+
+        // Anchor return created_at to the order's own outing day (assigned_at)
+        // so it appears in the correct daily agent summary, حتى لو الأدمن
+        // سجّل المرتجع بعد يوم النزول بأيام.
+        const anchorSrc = (order as any).assigned_at || (order as any).created_at;
+        const anchorDate = anchorSrc ? new Date(anchorSrc) : new Date();
+        const returnCreatedAt = new Date(
+          anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(),
+          12, 0, 0
+        ).toISOString();
+
         const { data: existingReturn, error: existingErr } = await supabase
           .from("returns")
           .select("id")
@@ -1060,6 +1071,7 @@ const AgentOrders = () => {
               return_amount: returnAmount,
               shipping_deduction: currentAgentShipping,
               returned_items: returnItems as any,
+              created_at: returnCreatedAt,
             })
             .eq("id", existingReturn.id);
           if (updErr) throw updErr;
@@ -1072,10 +1084,12 @@ const AgentOrders = () => {
             shipping_deduction: currentAgentShipping,
             returned_items: returnItems as any,
             notes: "مرتجع كامل",
+            created_at: returnCreatedAt,
           });
           if (insErr) throw insErr;
         }
       }
+
 
       const { error } = await supabase
         .from("orders")
