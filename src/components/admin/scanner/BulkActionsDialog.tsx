@@ -282,7 +282,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
             </div>
             <div>
               <Label className="text-xs mb-1 block">
-                تاريخ تسجيل الحركة (اختر يوم النزول الأصلي للمرتجعات)
+                تاريخ التسجيل (اختياري — بيتم تلقائياً بتاريخ يوم نزول كل أوردر)
               </Label>
               <Input
                 type="date"
@@ -291,9 +291,10 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
                 onChange={(e) => setStatusDate(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground mt-1">
-                لو التاريخ مختلف عن اليوم، هيتم نقل الأوردرات وتسجيل المرتجع بتاريخ الرحلة الأصلية.
+                افتراضياً: كل تسليم/مرتجع بيتسجل بتاريخ يوم نزول الأوردر (assigned_at). لو غيّرت التاريخ هنا، هيتم نقل الأوردرات كلها لليوم اللي اخترته.
               </p>
             </div>
+
           </div>
 
 
