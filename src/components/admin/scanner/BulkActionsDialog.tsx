@@ -57,40 +57,50 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
     setBusy(true);
     try {
       const today = getCairoDateKey(new Date());
-      const shouldShiftDate = !!statusDate && statusDate !== today;
-      const [ty, tm, td] = statusDate.split("-").map(Number);
+      const manualShift = !!statusDate && statusDate !== today;
 
-      // If admin picked a different date (e.g. the trip's outing day),
-      // shift each order's assigned_at to that day (preserving the time),
-      // so agent daily reports/returns land on the correct day.
-      if (shouldShiftDate) {
-        for (const o of orders) {
+      // Helper: anchor day for a given order.
+      // Rule: التسليم/المرتجع دايماً بيتسجلوا بتاريخ يوم النزول (assigned_at)
+      // للأوردر نفسه — مش تاريخ اليوم اللي اتعمل فيه الاسكان.
+      // لو الأدمن اختار تاريخ يدوي، بيغلب اليدوي.
+      const getAnchorDateKey = (o: any) => {
+        if (manualShift) return statusDate;
+        const src = o.assigned_at || o.created_at;
+        return src ? getCairoDateKey(src) : today;
+      };
+
+      for (const o of orders) {
+        const dayKey = getAnchorDateKey(o);
+        if (dayKey === today) continue;
+        const [ay, am, ad] = dayKey.split("-").map(Number);
+
+        // Shift assigned_at only when admin picked a manual date (بحيث
+        // ما نغيرش تاريخ التعيين الأصلي في الحالة العادية).
+        if (manualShift) {
           const original = new Date(o.assigned_at || o.created_at || new Date());
           const shifted = new Date(
-            ty, tm - 1, td,
+            ay, am - 1, ad,
             original.getHours(), original.getMinutes(), original.getSeconds()
           );
-          const iso = shifted.toISOString();
-          await supabase.from("orders").update({ assigned_at: iso }).eq("id", o.id);
-          // Keep any non-return agent_payments on the same day
-          await supabase
-            .from("agent_payments")
-            .update({ payment_date: statusDate })
-            .eq("order_id", o.id)
-            .neq("payment_type", "return");
+          await supabase.from("orders").update({ assigned_at: shifted.toISOString() }).eq("id", o.id);
         }
+
+        // اربط أي دفعات مرتبطة بالأوردر (ماعدا المرتجع) بنفس اليوم
+        await supabase
+          .from("agent_payments")
+          .update({ payment_date: dayKey })
+          .eq("order_id", o.id)
+          .neq("payment_type", "return");
       }
 
-      // Auto-create return records when scanning to a return status, so the
-      // agent summary picks it up (mirrors AgentOrders.updateStatusMutation).
+      // Auto-create/refresh return records when scanning to a return status,
+      // anchored to each order's own outing day.
       if (status === "returned" || status === "return_no_shipping") {
-        // Anchor return created_at to the chosen date at noon so it lands on
-        // the outing day in reports keyed by created_at.
-        const returnCreatedAt = shouldShiftDate
-          ? new Date(ty, tm - 1, td, 12, 0, 0).toISOString()
-          : null;
-
         for (const o of orders) {
+          const dayKey = getAnchorDateKey(o);
+          const [ay, am, ad] = dayKey.split("-").map(Number);
+          const returnCreatedAt = new Date(ay, am - 1, ad, 12, 0, 0).toISOString();
+
           const returnItems = (o.order_items || []).map((item: any) => {
             let productName = item?.products?.name;
             if (!productName && item?.product_details) {
@@ -108,17 +118,16 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
 
           const { data: existing } = await supabase.from("returns").select("id").eq("order_id", o.id).maybeSingle();
           if (existing?.id) {
-            const updatePayload: any = {
+            await supabase.from("returns").update({
               customer_id: o.customer_id,
               delivery_agent_id: o.delivery_agent_id,
               return_amount: returnAmount,
               shipping_deduction: shippingDeduction,
               returned_items: returnItems as any,
-            };
-            if (returnCreatedAt) updatePayload.created_at = returnCreatedAt;
-            await supabase.from("returns").update(updatePayload).eq("id", existing.id);
+              created_at: returnCreatedAt,
+            }).eq("id", existing.id);
           } else {
-            const insertPayload: any = {
+            await supabase.from("returns").insert({
               order_id: o.id,
               customer_id: o.customer_id,
               delivery_agent_id: o.delivery_agent_id,
@@ -126,9 +135,8 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
               shipping_deduction: shippingDeduction,
               returned_items: returnItems as any,
               notes: "مرتجع عبر الباركود سكانر",
-            };
-            if (returnCreatedAt) insertPayload.created_at = returnCreatedAt;
-            await supabase.from("returns").insert(insertPayload);
+              created_at: returnCreatedAt,
+            });
           }
         }
       }
@@ -136,11 +144,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
       const { error } = await supabase.from("orders").update({ status: status as any }).in("id", ids);
       if (error) throw error;
       await logBulk("status_change", status);
-      toast.success(
-        shouldShiftDate
-          ? `تم تحديث ${ids.length} أوردر وتسجيلها بتاريخ ${statusDate}`
-          : `تم تغيير حالة ${ids.length} أوردر`
-      );
+      toast.success(`تم تحديث ${ids.length} أوردر — تم التسجيل بتاريخ يوم النزول لكل أوردر`);
       onActionDone();
     } catch (e: any) {
       toast.error("خطأ: " + (e?.message || e));
@@ -148,6 +152,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
       setBusy(false);
     }
   };
+
 
 
   const assignAgent = async () => {
@@ -277,7 +282,7 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
             </div>
             <div>
               <Label className="text-xs mb-1 block">
-                تاريخ تسجيل الحركة (اختر يوم النزول الأصلي للمرتجعات)
+                تاريخ التسجيل (اختياري — بيتم تلقائياً بتاريخ يوم نزول كل أوردر)
               </Label>
               <Input
                 type="date"
@@ -286,9 +291,10 @@ const BulkActionsDialog = ({ open, onOpenChange, orders, agents, onActionDone }:
                 onChange={(e) => setStatusDate(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground mt-1">
-                لو التاريخ مختلف عن اليوم، هيتم نقل الأوردرات وتسجيل المرتجع بتاريخ الرحلة الأصلية.
+                افتراضياً: كل تسليم/مرتجع بيتسجل بتاريخ يوم نزول الأوردر (assigned_at). لو غيّرت التاريخ هنا، هيتم نقل الأوردرات كلها لليوم اللي اخترته.
               </p>
             </div>
+
           </div>
 
 
