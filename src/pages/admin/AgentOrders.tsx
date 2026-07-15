@@ -83,6 +83,21 @@ const AgentOrders = () => {
     }).format(d);
   };
 
+  const getOrderAccountingDate = (order: any) => getDateKey(order?.assigned_at || order?.created_at || new Date());
+
+  const getOrderAccountingTimestamp = (order: any) => {
+    const [year, month, day] = getOrderAccountingDate(order).split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0).toISOString();
+  };
+
+  const escapeHtml = (value: unknown) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
   const today = getDateKey(new Date());
   const [summaryDateFilter, setSummaryDateFilter] = useState<string>(today);
 
@@ -1306,6 +1321,7 @@ const AgentOrders = () => {
             shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
+            created_at: data.created_at,
           } as any)
           .eq("id", existingReturn.id);
         if (error) throw error;
@@ -1320,6 +1336,7 @@ const AgentOrders = () => {
             shipping_deduction: data.shipping_deduction ?? 0,
             returned_items: data.returned_items,
             notes: data.notes,
+            created_at: data.created_at,
           } as any);
         if (error) throw error;
       }
