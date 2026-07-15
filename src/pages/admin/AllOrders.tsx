@@ -49,6 +49,23 @@ const AllOrders = () => {
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [returnNotes, setReturnNotes] = useState("");
 
+  const getDateKey = (value: string | Date) => {
+    const d = typeof value === "string" ? new Date(value) : value;
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Africa/Cairo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(d);
+  };
+
+  const getOrderAccountingDate = (order: any) => getDateKey(order?.assigned_at || order?.created_at || new Date());
+
+  const getOrderAccountingTimestamp = (order: any) => {
+    const [year, month, day] = getOrderAccountingDate(order).split("-").map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0).toISOString();
+  };
+
   const { data: orders, isLoading } = useQuery({
     queryKey: ["all-orders"],
     queryFn: async () => {
@@ -185,6 +202,9 @@ const AllOrders = () => {
           0
         );
 
+        const currentAgentShipping = parseFloat((order.agent_shipping_cost ?? 0).toString()) || 0;
+        const returnCreatedAt = getOrderAccountingTimestamp(order);
+
         const { data: existingReturn, error: existingErr } = await supabase
           .from("returns")
           .select("id")
@@ -199,8 +219,10 @@ const AllOrders = () => {
               customer_id: order.customer_id,
               delivery_agent_id: order.delivery_agent_id,
               return_amount: returnAmount,
+              shipping_deduction: currentAgentShipping,
               returned_items: returnItems as any,
               notes: "مرتجع كامل",
+              created_at: returnCreatedAt,
             })
             .eq("id", existingReturn.id);
           if (updErr) throw updErr;
@@ -210,8 +232,10 @@ const AllOrders = () => {
             customer_id: order.customer_id,
             delivery_agent_id: order.delivery_agent_id,
             return_amount: returnAmount,
+            shipping_deduction: currentAgentShipping,
             returned_items: returnItems as any,
             notes: "مرتجع كامل",
+            created_at: returnCreatedAt,
           });
           if (insErr) throw insErr;
         }
@@ -219,8 +243,16 @@ const AllOrders = () => {
       
       // NOTE: agent_payments are handled automatically by DB triggers (handle_order_status_change)
       // We only need to upsert the returns record so the trigger handle_return_creation fires.
-      if (newStatus === "returned" && order) {
+      if ((newStatus === "returned" || newStatus === "return_no_shipping") && order) {
         await upsertReturnsForFullReturn();
+      }
+
+      if (["delivered", "delivered_with_modification", "returned", "return_no_shipping"].includes(newStatus) && order) {
+        const accountingDate = getOrderAccountingDate(order);
+        await supabase
+          .from("agent_payments")
+          .update({ payment_date: accountingDate })
+          .eq("order_id", orderId);
       }
       
       // If changing to pending or processing, unassign from agent so it goes back to Orders
@@ -318,9 +350,7 @@ const AllOrders = () => {
         
         // Create payment record for the return (negative amount to show in "باقي من المرتجع")
         // استخدم تاريخ تعيين الأوردر كـ payment_date
-        const assignedDate = (selectedOrderForReturn as any).assigned_at 
-          ? new Date((selectedOrderForReturn as any).assigned_at).toISOString().split('T')[0]
-          : new Date(selectedOrderForReturn.created_at).toISOString().split('T')[0];
+        const assignedDate = getOrderAccountingDate(selectedOrderForReturn);
         
         const { error: paymentError } = await supabase
           .from("agent_payments")
@@ -337,6 +367,8 @@ const AllOrders = () => {
       }
       
       // Create return record
+      const returnCreatedAt = getOrderAccountingTimestamp(selectedOrderForReturn);
+      const shippingDeduction = parseFloat(selectedOrderForReturn.agent_shipping_cost?.toString() || "0") || 0;
       const { error: returnError } = await supabase
         .from("returns")
         .insert([{
@@ -344,8 +376,10 @@ const AllOrders = () => {
           customer_id: selectedOrderForReturn.customer_id,
           delivery_agent_id: selectedOrderForReturn.delivery_agent_id,
           return_amount: returnAmount,
+          shipping_deduction: shippingDeduction,
           returned_items: returnedItems as any,
-          notes: returnNotes
+          notes: returnNotes,
+          created_at: returnCreatedAt,
         }]);
       
       if (returnError) throw returnError;
@@ -396,7 +430,7 @@ const AllOrders = () => {
   const filteredOrders = orders?.filter(order => {
     if (statusFilter !== "all" && order.status !== statusFilter) return false;
     if (startDate || endDate) {
-      const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+      const orderDate = getOrderAccountingDate(order);
       if (startDate && orderDate < startDate) return false;
       if (endDate && orderDate > endDate) return false;
     }
@@ -477,7 +511,7 @@ const AllOrders = () => {
         "المندوب": order.delivery_agents?.name || "-",
         "الحالة": getStatusText(order.status),
         "الملاحظات": order.notes || "-",
-        "التاريخ": new Date(order.created_at).toLocaleDateString("ar-EG"),
+        "التاريخ": getOrderAccountingDate(order),
       };
     });
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -819,7 +853,7 @@ const AllOrders = () => {
                           </TableCell>
                           <TableCell className="max-w-xs truncate">{order.notes || "-"}</TableCell>
                           <TableCell className="text-xs">
-                            {new Date(order.created_at).toLocaleDateString("ar-EG")}
+                            {new Date((order as any).assigned_at || order.created_at).toLocaleDateString("ar-EG")}
                           </TableCell>
                           {canEditAllOrders ? (
                           <TableCell>
