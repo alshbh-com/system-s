@@ -1105,6 +1105,14 @@ const AgentOrders = () => {
         }
       }
 
+      if (["delivered", "returned", "return_no_shipping"].includes(status)) {
+        const accountingDate = getOrderAccountingDate(order);
+        await supabase
+          .from("agent_payments")
+          .update({ payment_date: accountingDate })
+          .eq("order_id", id);
+      }
+
 
       const { error } = await supabase
         .from("orders")
@@ -1522,6 +1530,149 @@ const AgentOrders = () => {
     });
   };
 
+  const getProductsTextForSheet = (order: any) => {
+    const formattedItems = formatOrderItems(order.order_items || []);
+    if (formattedItems.length > 0 && formattedItems.some((item: any) => item.name && item.name !== "منتج محذوف")) {
+      return formattedItems.map((item: any) => {
+        const sizes = formatSizesDisplay(item.sizes);
+        return [item.name, item.color, sizes].filter(Boolean).join(" - ") + ` × ${item.totalQuantity}`;
+      }).join(" | ");
+    }
+
+    if (order.order_details) {
+      try {
+        const parsed = JSON.parse(order.order_details);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item: any) => {
+            const parts = [item.name || "منتج", item.color, item.size].filter(Boolean);
+            return `${parts.join(" - ")} × ${item.quantity || 1}`;
+          }).join(" | ");
+        }
+      } catch { /* noop */ }
+      return String(order.order_details);
+    }
+
+    return "-";
+  };
+
+  const handlePrintAgentSheet = () => {
+    if (selectedOrders.length === 0) {
+      toast.error("يرجى اختيار أوردرات لطباعة الشيت");
+      return;
+    }
+
+    const selectedOrdersData = (orders || []).filter(o => selectedOrders.includes(o.id));
+    if (!selectedOrdersData.length) return;
+
+    const agentName = selectedAgent?.name || "المندوب";
+    const sheetDate = singleDateFilter || getOrderAccountingDate(selectedOrdersData[0]);
+    const totals = selectedOrdersData.reduce((acc, order: any) => {
+      const productsTotal = parseFloat(order.total_amount?.toString() || "0");
+      const customerShipping = parseFloat(order.shipping_cost?.toString() || "0");
+      const agentShipping = parseFloat(order.agent_shipping_cost?.toString() || "0");
+      acc.cod += productsTotal + customerShipping;
+      acc.net += productsTotal + customerShipping - agentShipping;
+      return acc;
+    }, { cod: 0, net: 0 });
+
+    const rows = selectedOrdersData.map((order: any, index: number) => {
+      const cod = parseFloat(order.total_amount?.toString() || "0") + parseFloat(order.shipping_cost?.toString() || "0");
+      return `<tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(order.tracking_code || order.order_number || order.id.slice(0, 8))}</td>
+        <td>${escapeHtml(order.customers?.name || "")}</td>
+        <td>${escapeHtml(order.customers?.phone || "")}</td>
+        <td>${escapeHtml(order.customers?.address || "")}</td>
+        <td>${escapeHtml(order.customers?.governorate || "")}</td>
+        <td>شحن عادي</td>
+        <td>${escapeHtml(getProductsTextForSheet(order))}</td>
+        <td>${cod.toFixed(0)}</td>
+        <td>${escapeHtml(getOrderAccountingDate(order))}</td>
+      </tr>`;
+    }).join("");
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html dir="rtl">
+        <head>
+          <title>شيت المندوب - ${escapeHtml(agentName)}</title>
+          <style>
+            *{box-sizing:border-box;margin:0;padding:0}
+            body{font-family:Arial,'Cairo',sans-serif;color:#111;background:#fff;padding:10mm}
+            .header{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;align-items:stretch;margin-bottom:8px}
+            .brand,.meta,.barcode{border:1.5px solid #111;min-height:62px;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px}
+            .brand{flex-direction:column;font-weight:900}
+            .brand .name{font-size:24px;letter-spacing:.5px}
+            .brand .sub{font-size:12px;margin-top:4px}
+            .meta{font-size:12px;line-height:1.8;text-align:right;justify-content:flex-start}
+            .barcode{font-size:28px;letter-spacing:4px;font-family:'Libre Barcode 39',monospace;flex-direction:column}
+            .barcode small{font-family:Arial,sans-serif;font-size:10px;letter-spacing:0;margin-top:3px}
+            h1{text-align:center;font-size:16px;margin:6px 0 8px;font-weight:900}
+            table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px}
+            th,td{border:1px solid #111;padding:4px 3px;text-align:center;vertical-align:middle;word-break:break-word;line-height:1.35}
+            th{background:#f0f0f0;font-weight:900}
+            td:nth-child(5),td:nth-child(8){text-align:right}
+            .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;font-size:12px}
+            .summary div{border:1.5px solid #111;padding:6px;text-align:center;font-weight:900}
+            .signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;font-size:12px}
+            .signatures div{border-top:1.5px solid #111;padding-top:6px;text-align:center;font-weight:700}
+            @page{size:A4 landscape;margin:8mm}
+            @media print{body{padding:0}.no-print{display:none}}
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="meta">
+              <div>
+                <strong>المندوب:</strong> ${escapeHtml(agentName)}<br/>
+                <strong>الكود:</strong> ${escapeHtml(selectedAgent?.serial_number || "-")}<br/>
+                <strong>يوم النزول:</strong> ${escapeHtml(sheetDate)}
+              </div>
+            </div>
+            <div class="brand">
+              <div class="name">الصقر اكسبريس</div>
+              <div class="sub">بيانات أوردرات المندوب</div>
+            </div>
+            <div class="barcode">*${escapeHtml(selectedAgent?.serial_number || selectedOrdersData.length)}*<small>Data Run Sheet</small></div>
+          </div>
+          <h1>شيت تسليم أوردرات المندوب</h1>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:3%">م</th>
+                <th style="width:10%">رقم الشحنة</th>
+                <th style="width:11%">المرسل إليه</th>
+                <th style="width:10%">تليفون</th>
+                <th style="width:21%">العنوان</th>
+                <th style="width:9%">المحافظة</th>
+                <th style="width:8%">نوع الخدمة</th>
+                <th style="width:18%">وصف الشحنة</th>
+                <th style="width:6%">COD</th>
+                <th style="width:8%">تاريخ النزول</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="summary">
+            <div>عدد الأوردرات: ${selectedOrdersData.length}</div>
+            <div>إجمالي COD: ${totals.cod.toFixed(0)} ج.م</div>
+            <div>صافي المندوب: ${totals.net.toFixed(0)} ج.م</div>
+            <div>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG")}</div>
+          </div>
+          <div class="signatures">
+            <div>توقيع المندوب</div>
+            <div>توقيع مسئول التسليم</div>
+            <div>توقيع المراجعة</div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 200);
+  };
+
 
   const handleBulkStatusUpdate = async () => {
     if (selectedOrders.length === 0 || !bulkStatus) {
@@ -1625,7 +1776,8 @@ const AgentOrders = () => {
         quantity: item.returned_quantity,
         price: item.price
       })),
-      notes: returnData.notes
+      notes: returnData.notes,
+      created_at: getOrderAccountingTimestamp(selectedOrderForReturn),
     });
   };
 
