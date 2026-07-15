@@ -2003,6 +2003,10 @@ const AgentOrders = () => {
                         <Printer className="ml-2 h-4 w-4" />
                         طباعة
                       </Button>
+                      <Button onClick={handlePrintAgentSheet} size="sm" variant="outline">
+                        <FileSpreadsheet className="ml-2 h-4 w-4" />
+                        شيت المندوب
+                      </Button>
                       {canEditAgentOrders && (
                       <BulkRescheduleDialog
                         orders={(filteredOrders || []).filter(o => selectedOrders.includes(o.id))}
