@@ -907,20 +907,41 @@ const AgentOrders = () => {
       if (!selectedAgentId) throw new Error("لم يتم اختيار مندوب");
 
       const agentName = agents?.find(a => a.id === selectedAgentId)?.name || "مندوب";
-      
+
       // Get current user info from localStorage
       const userDataStr = localStorage.getItem("adminUser");
       const userData = userDataStr ? JSON.parse(userDataStr) : null;
+
+      // Shift delivered/returned orders of this day to actual closing day (today)
+      // so they appear under today's date in All Orders.
+      const todayKey = getDateKey(new Date());
+      if (todayKey !== date) {
+        const dayOrders = (allAgentOrders || []).filter((o: any) => {
+          if (!o.assigned_at) return false;
+          if (getDateKey(o.assigned_at) !== date) return false;
+          return ["delivered", "delivered_with_modification", "returned", "return_no_shipping"].includes(o.status);
+        });
+        const orderIds = dayOrders.map((o: any) => o.id);
+        if (orderIds.length) {
+          const [ay, am, ad] = todayKey.split("-").map(Number);
+          const nowD = new Date();
+          const shifted = new Date(ay, am - 1, ad, nowD.getHours(), nowD.getMinutes(), nowD.getSeconds()).toISOString();
+
+          await supabase.from("orders").update({ assigned_at: shifted }).in("id", orderIds);
+          await supabase.from("agent_payments").update({ payment_date: todayKey }).in("order_id", orderIds);
+          await supabase.from("returns").update({ created_at: shifted }).in("order_id", orderIds);
+        }
+      }
 
       const { error } = await supabase
         .from("agent_daily_closings")
         .insert({
           delivery_agent_id: selectedAgentId,
-          closing_date: date,
+          closing_date: todayKey,
           net_amount: netAmount,
           closed_by: userData?.id || null,
           closed_by_username: userData?.username || "غير معروف",
-          notes: `تم التقفيل - صافي المستحق: ${netAmount.toFixed(2)} ج.م`,
+          notes: `تم التقفيل - صافي المستحق: ${netAmount.toFixed(2)} ج.م (يومية ${date})`,
         });
 
       if (error) throw error;
@@ -928,10 +949,12 @@ const AgentOrders = () => {
       // Log the activity
       await logAction("تقفيل يومية مندوب", "agent_daily_closings", {
         agent_name: agentName,
-        closing_date: date,
+        closing_date: todayKey,
+        outing_date: date,
         net_amount: netAmount,
       });
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent_daily_closings"] });
       toast.success("تم تقفيل اليومية بنجاح");
