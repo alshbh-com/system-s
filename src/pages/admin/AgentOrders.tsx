@@ -957,8 +957,13 @@ const AgentOrders = () => {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent_daily_closings"] });
-      toast.success("تم تقفيل اليومية بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["all-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["agent_orders"] });
+      queryClient.invalidateQueries({ queryKey: ["agent_payments_full"] });
+      queryClient.invalidateQueries({ queryKey: ["agent_returns"] });
+      toast.success("تم تقفيل اليومية بنجاح ونقل الأوردرات لتاريخ اليوم");
     },
+
     onError: (error: any) => {
       if (error?.message?.includes("duplicate")) {
         toast.error("تم تقفيل هذا اليوم بالفعل");
